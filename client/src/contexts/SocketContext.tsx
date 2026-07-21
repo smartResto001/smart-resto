@@ -44,7 +44,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     // Socket.io client initialization
-    const socketInstance = io('/', {
+    const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '/';
+    const socketInstance = io(backendUrl, {
       transports: ['websocket', 'polling'],
     });
 
