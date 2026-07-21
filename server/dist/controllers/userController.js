@@ -10,16 +10,24 @@ const types_1 = require("../types");
 const getAllUsers = async (req, res, next) => {
     try {
         const users = await prisma_1.prisma.user.findMany({
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                createdAt: true,
+            include: {
+                userRoles: {
+                    include: {
+                        role: true,
+                    },
+                },
             },
             orderBy: { createdAt: 'desc' },
         });
-        return res.status(200).json({ success: true, data: users });
+        const formattedUsers = users.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            phone: u.phone,
+            roles: u.userRoles.map((ur) => ur.role.name),
+            createdAt: u.createdAt,
+        }));
+        return res.status(200).json({ success: true, data: formattedUsers });
     }
     catch (error) {
         next(error);
@@ -28,9 +36,9 @@ const getAllUsers = async (req, res, next) => {
 exports.getAllUsers = getAllUsers;
 const createUser = async (req, res, next) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, phone } = req.body;
         if (!name || !email || !password || !role) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+            return res.status(400).json({ success: false, message: 'All required fields must be provided' });
         }
         if (!Object.values(types_1.Role).includes(role)) {
             return res.status(400).json({ success: false, message: 'Invalid role' });
@@ -39,23 +47,38 @@ const createUser = async (req, res, next) => {
         if (existing) {
             return res.status(400).json({ success: false, message: 'User with this email already exists' });
         }
+        let targetRole = await prisma_1.prisma.role.findUnique({ where: { name: role } });
+        if (!targetRole) {
+            targetRole = await prisma_1.prisma.role.create({ data: { name: role } });
+        }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const user = await prisma_1.prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
-                role: role,
+                phone,
+                userRoles: {
+                    create: [{ roleId: targetRole.id }],
+                },
             },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                createdAt: true,
+            include: {
+                userRoles: {
+                    include: {
+                        role: true,
+                    },
+                },
             },
         });
-        return res.status(201).json({ success: true, data: user });
+        const formattedUser = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            roles: user.userRoles.map((ur) => ur.role.name),
+            createdAt: user.createdAt,
+        };
+        return res.status(201).json({ success: true, data: formattedUser });
     }
     catch (error) {
         next(error);

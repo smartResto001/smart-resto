@@ -93,7 +93,7 @@ export const KitchenDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* Header & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
         <div>
@@ -109,11 +109,10 @@ export const KitchenDashboard: React.FC = () => {
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                filterStatus === status
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filterStatus === status
                   ? 'bg-amber-500 text-slate-950 shadow-md'
                   : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               {status} ({status === 'ALL' ? orders.length : orders.filter((o) => o.status === status).length})
             </button>
@@ -136,13 +135,12 @@ export const KitchenDashboard: React.FC = () => {
             return (
               <div
                 key={order.id}
-                className={`bg-slate-900 border-2 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between transition-all duration-300 ${
-                  order.status === 'PENDING'
+                className={`bg-slate-900 border-2 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between transition-all duration-300 ${order.status === 'PENDING'
                     ? 'border-yellow-500/60 shadow-yellow-500/10 animate-pulse'
                     : order.status === 'PREPARING'
-                    ? 'border-orange-500/60 shadow-orange-500/10'
-                    : 'border-emerald-500/60 shadow-emerald-500/10'
-                }`}
+                      ? 'border-orange-500/60 shadow-orange-500/10'
+                      : 'border-emerald-500/60 shadow-emerald-500/10'
+                  }`}
               >
                 {/* Card Top Banner */}
                 <div className={`p-4 border-b flex justify-between items-center ${getCardHeaderColor(order.status)}`}>
@@ -193,9 +191,8 @@ export const KitchenDashboard: React.FC = () => {
                         </div>
 
                         <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            item.foodItem?.isVeg ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`}
+                          className={`w-2.5 h-2.5 rounded-full ${item.foodItem?.isVeg ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`}
                           title={item.foodItem?.isVeg ? 'Veg' : 'Non-Veg'}
                         />
                       </div>

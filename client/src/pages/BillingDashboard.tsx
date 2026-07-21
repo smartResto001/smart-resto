@@ -122,7 +122,7 @@ export const BillingDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* Top Header */}
       <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
         <div>
@@ -137,7 +137,7 @@ export const BillingDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Left Column: Unbilled Orders Selector */}
         <div className="lg:col-span-5 space-y-4">
           <h3 className="font-bold text-slate-200 text-sm">Active Orders ({unbilledOrders.length})</h3>
@@ -155,11 +155,10 @@ export const BillingDashboard: React.FC = () => {
                   <div
                     key={order.id}
                     onClick={() => handleSelectOrder(order)}
-                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                      isSelected
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${isSelected
                         ? 'bg-slate-900 border-amber-500 shadow-lg shadow-amber-500/10'
                         : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
@@ -167,11 +166,10 @@ export const BillingDashboard: React.FC = () => {
                         <h4 className="font-bold text-slate-100 text-sm">{order.customerName}</h4>
                       </div>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          order.status === 'READY'
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${order.status === 'READY'
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                             : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                        }`}
+                          }`}
                       >
                         {order.status}
                       </span>
@@ -228,11 +226,10 @@ export const BillingDashboard: React.FC = () => {
                         <button
                           key={rate}
                           onClick={() => setTaxPercent(rate)}
-                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            taxPercent === rate
+                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${taxPercent === rate
                               ? 'bg-amber-500 text-slate-950'
                               : 'bg-slate-800 text-slate-400'
-                          }`}
+                            }`}
                         >
                           {rate}%
                         </button>
@@ -261,11 +258,10 @@ export const BillingDashboard: React.FC = () => {
                       <button
                         key={method}
                         onClick={() => setPaymentMethod(method)}
-                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${
-                          paymentMethod === method
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 border ${paymentMethod === method
                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
-                        }`}
+                          }`}
                       >
                         <span>{method.replace('_', ' ')}</span>
                       </button>
@@ -353,7 +349,7 @@ export const BillingDashboard: React.FC = () => {
       {showPrintModal && receiptData && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl">
-            
+
             {/* Printable Receipt Content */}
             <div id="thermal-receipt" className="bg-white text-slate-900 p-6 rounded-2xl font-mono text-xs space-y-4 shadow-inner">
               <div className="text-center space-y-1 border-b border-slate-200 pb-3">

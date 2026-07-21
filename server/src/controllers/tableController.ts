@@ -5,7 +5,10 @@ import { getSocketIO } from '../socket/socketHandler';
 
 export const getAllTables = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const userId = req.user?.id;
+
     const tables = await prisma.table.findMany({
+      where: userId ? { userId } : {},
       orderBy: { tableNumber: 'asc' },
       include: {
         orders: {
@@ -61,13 +64,21 @@ export const updateTableStatus = async (req: Request, res: Response, next: NextF
 export const createTable = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { tableNumber, capacity } = req.body;
+    const userId = req.user?.id;
 
-    const existing = await prisma.table.findUnique({
-      where: { tableNumber: Number(tableNumber) },
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User authentication required' });
+    }
+
+    const existing = await prisma.table.findFirst({
+      where: {
+        userId,
+        tableNumber: Number(tableNumber),
+      },
     });
 
     if (existing) {
-      return res.status(400).json({ success: false, message: `Table Number ${tableNumber} already exists` });
+      return res.status(400).json({ success: false, message: `Table Number ${tableNumber} already exists for your account` });
     }
 
     const table = await prisma.table.create({
@@ -75,6 +86,7 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
         tableNumber: Number(tableNumber),
         capacity: Number(capacity) || 4,
         status: TableStatus.AVAILABLE,
+        userId,
       },
     });
 

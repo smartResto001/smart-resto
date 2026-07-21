@@ -216,7 +216,7 @@ export const WaiterDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* Ready Food Toast Banner Alerts */}
       {readyNotifications.map((notif) => (
         <div
@@ -257,17 +257,15 @@ export const WaiterDashboard: React.FC = () => {
         <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setActiveTab('tables')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'tables' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'tables' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Table Map ({tables.length})
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'orders' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'orders' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Active Orders ({runningOrders.length})
           </button>
@@ -394,7 +392,7 @@ export const WaiterDashboard: React.FC = () => {
       {isOrderModalOpen && selectedTable && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            
+
             {/* Modal Header */}
             <div className="p-5 bg-slate-800/60 border-b border-slate-800 flex justify-between items-center">
               <div>
@@ -413,10 +411,10 @@ export const WaiterDashboard: React.FC = () => {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
+
               {/* Left Column: Menu Selector */}
               <div className="lg:col-span-7 space-y-4">
-                
+
                 {/* Search & Category filter */}
                 <div className="space-y-3">
                   <div className="relative">
@@ -433,11 +431,10 @@ export const WaiterDashboard: React.FC = () => {
                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
                     <button
                       onClick={() => setSelectedCategory('ALL')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                        selectedCategory === 'ALL'
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === 'ALL'
                           ? 'bg-amber-500 text-slate-950'
                           : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       All
                     </button>
@@ -445,11 +442,10 @@ export const WaiterDashboard: React.FC = () => {
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                          selectedCategory === cat.id
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat.id
                             ? 'bg-amber-500 text-slate-950'
                             : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                        }`}
+                          }`}
                       >
                         {cat.name}
                       </button>
@@ -475,9 +471,8 @@ export const WaiterDashboard: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`w-2.5 h-2.5 rounded-full ${
-                                item.isVeg ? 'bg-emerald-500' : 'bg-rose-500'
-                              }`}
+                              className={`w-2.5 h-2.5 rounded-full ${item.isVeg ? 'bg-emerald-500' : 'bg-rose-500'
+                                }`}
                             />
                             <h4 className="font-bold text-xs text-slate-100 leading-snug">{item.name}</h4>
                           </div>

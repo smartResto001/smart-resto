@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   allowedRoles?: Role[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -21,20 +21,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect user to their default role home page if unauthorized for requested page
-    switch (user.role) {
-      case 'ADMIN':
-        return <Navigate to="/admin" replace />;
-      case 'KITCHEN':
-        return <Navigate to="/kitchen" replace />;
-      case 'CASHIER':
-        return <Navigate to="/billing" replace />;
-      default:
-        return <Navigate to="/waiter" replace />;
-    }
   }
 
   return (

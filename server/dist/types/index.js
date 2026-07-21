@@ -5,7 +5,8 @@ exports.Role = {
     ADMIN: 'ADMIN',
     WAITER: 'WAITER',
     KITCHEN: 'KITCHEN',
-    CASHIER: 'CASHIER',
+    BILLING: 'BILLING',
+    USER: 'USER',
 };
 exports.TableStatus = {
     AVAILABLE: 'AVAILABLE',

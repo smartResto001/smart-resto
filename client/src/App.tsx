@@ -4,28 +4,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { Login } from './pages/Login';
+import { RoleSelection } from './pages/RoleSelection';
 import { WaiterDashboard } from './pages/WaiterDashboard';
 import { KitchenDashboard } from './pages/KitchenDashboard';
 import { BillingDashboard } from './pages/BillingDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const RoleBasedRedirect: React.FC = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-
-  switch (user.role) {
-    case 'ADMIN':
-      return <Navigate to="/admin" replace />;
-    case 'KITCHEN':
-      return <Navigate to="/kitchen" replace />;
-    case 'CASHIER':
-      return <Navigate to="/billing" replace />;
-    default:
-      return <Navigate to="/waiter" replace />;
-  }
+  return <Navigate to="/role-selection" replace />;
 };
 
 export const App: React.FC = () => {
@@ -33,29 +31,21 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SocketProvider>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
-              {/* Public Route */}
+              {/* Primary Public Route: Login & Create Account */}
               <Route path="/login" element={<Login />} />
 
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['WAITER', 'ADMIN']} />}>
+              {/* Protected Workstation Routes for Logged In Accounts */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/role-selection" element={<RoleSelection />} />
                 <Route path="/waiter" element={<WaiterDashboard />} />
-              </Route>
-
-              <Route element={<ProtectedRoute allowedRoles={['KITCHEN', 'ADMIN']} />}>
                 <Route path="/kitchen" element={<KitchenDashboard />} />
-              </Route>
-
-              <Route element={<ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']} />}>
                 <Route path="/billing" element={<BillingDashboard />} />
-              </Route>
-
-              <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                 <Route path="/admin" element={<AdminDashboard />} />
               </Route>
 
-              {/* Home Redirect */}
+              {/* Root & Fallback Redirects */}
               <Route path="/" element={<RoleBasedRedirect />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

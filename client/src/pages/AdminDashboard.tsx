@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../services/api';
-import { Category, FoodItem, Table, User, DashboardStats } from '../types';
-import { LayoutDashboard, Utensils, Grid, Users, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Category, FoodItem, Table, DashboardStats } from '../types';
+import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'menu' | 'tables' | 'users'>('analytics');
+  const { user, updateUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<'analytics' | 'menu' | 'tables'>('analytics');
 
   // Stats State
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -29,19 +31,18 @@ export const AdminDashboard: React.FC = () => {
   const [newTableNum, setNewTableNum] = useState('');
   const [newTableCap, setNewTableCap] = useState('4');
 
-  // User State
-  const [users, setUsers] = useState<User[]>([]);
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userPassword, setUserPassword] = useState('');
-  const [userRole, setUserRole] = useState<'ADMIN' | 'WAITER' | 'KITCHEN' | 'CASHIER'>('WAITER');
+  // Admin Password Management State
+  const [isAdminPassModalOpen, setIsAdminPassModalOpen] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [confirmAdminPassword, setConfirmAdminPassword] = useState('');
+  const [adminPassError, setAdminPassError] = useState('');
+  const [adminPassSuccess, setAdminPassSuccess] = useState('');
+  const [isSavingPass, setIsSavingPass] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
     fetchMenu();
     fetchTables();
-    fetchUsers();
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -75,16 +76,62 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
+  const handleDeleteTable = async (id: string) => {
+    if (!confirm('Delete this table?')) return;
     try {
-      const res = await API.get('/users');
-      setUsers(res.data.data);
-    } catch (err) {
-      console.error('Failed to fetch users', err);
+      await API.delete(`/tables/${id}`);
+      fetchTables();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete table');
     }
   };
 
-  // Food Item Handlers
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          setFoodImage(compressedDataUrl);
+        } else if (typeof event.target?.result === 'string') {
+          setFoodImage(event.target.result);
+        }
+      };
+      if (typeof event.target?.result === 'string') {
+        img.src = event.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenFoodModal = (item?: FoodItem) => {
     if (item) {
       setEditingFoodItem(item);
@@ -159,92 +206,80 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteTable = async (id: string) => {
-    if (!confirm('Delete this table?')) return;
-    try {
-      await API.delete(`/tables/${id}`);
-      fetchTables();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete table');
-    }
-  };
-
-  // User Handlers
-  const handleCreateUser = async (e: React.FormEvent) => {
+  const handleSaveAdminPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await API.post('/users', {
-        name: userName,
-        email: userEmail,
-        password: userPassword,
-        role: userRole,
-      });
-      setIsUserModalOpen(false);
-      setUserName('');
-      setUserEmail('');
-      setUserPassword('');
-      fetchUsers();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create staff user');
-    }
-  };
+    setAdminPassError('');
+    setAdminPassSuccess('');
 
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm('Delete this staff account?')) return;
+    if (newAdminPassword && newAdminPassword !== confirmAdminPassword) {
+      setAdminPassError('Passwords do not match');
+      return;
+    }
+
+    setIsSavingPass(true);
     try {
-      await API.delete(`/users/${id}`);
-      fetchUsers();
+      const res = await API.post('/auth/admin-password/set', { adminPassword: newAdminPassword });
+      updateUser(res.data.user);
+      setAdminPassSuccess(res.data.message);
+      setTimeout(() => {
+        setIsAdminPassModalOpen(false);
+      }, 1200);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete user');
+      setAdminPassError(err.response?.data?.message || 'Failed to update admin password');
+    } finally {
+      setIsSavingPass(false);
     }
   };
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* Admin Top Navigation Tabs */}
       <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex flex-wrap gap-2 justify-between items-center">
-        <div className="flex items-center space-x-2 px-2">
-          <ShieldCheck className="w-6 h-6 text-purple-400" />
-          <h2 className="text-lg font-bold text-white">Admin Portal</h2>
+        <div className="flex items-center space-x-3 px-2">
+          <div className="flex items-center space-x-2">
+            <ShieldCheck className="w-6 h-6 text-purple-400" />
+            <h2 className="text-lg font-bold text-white">Admin Portal</h2>
+          </div>
+          <button
+            onClick={() => {
+              setNewAdminPassword('');
+              setConfirmAdminPassword('');
+              setAdminPassError('');
+              setAdminPassSuccess('');
+              setIsAdminPassModalOpen(true);
+            }}
+            className="px-3 py-1.5 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 border border-purple-800/50 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all shadow-inner"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>{user?.hasAdminPassword ? 'Change Password' : 'Set Admin Password'}</span>
+          </button>
         </div>
 
         <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
-              activeTab === 'analytics' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${activeTab === 'analytics' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Dashboard Stats</span>
           </button>
           <button
             onClick={() => setActiveTab('menu')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
-              activeTab === 'menu' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${activeTab === 'menu' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             <Utensils className="w-3.5 h-3.5" />
             <span>Menu & Items</span>
           </button>
           <button
             onClick={() => setActiveTab('tables')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
-              activeTab === 'tables' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${activeTab === 'tables' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             <Grid className="w-3.5 h-3.5" />
             <span>Tables</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
-              activeTab === 'users' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Staff Users</span>
           </button>
         </div>
       </div>
@@ -301,7 +336,7 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Top Selling Dishes & Recent Payments */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
+
             {/* Top Selling Dishes */}
             <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
               <h3 className="font-bold text-slate-100 text-sm">Top Selling Dishes</h3>
@@ -457,45 +492,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 4: STAFF USERS MANAGEMENT */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="font-bold text-slate-100 text-base">Staff User Accounts ({users.length})</h3>
-            <button
-              onClick={() => setIsUserModalOpen(true)}
-              className="py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-lg transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Staff Account</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {users.map((u) => (
-              <div key={u.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-bold text-sm text-slate-100">{u.name}</h4>
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/50">
-                      {u.role}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">{u.email}</p>
-                </div>
-                <button
-                  onClick={() => handleDeleteUser(u.id)}
-                  className="w-full py-1.5 bg-rose-950/40 hover:bg-rose-950 text-rose-400 text-xs font-bold rounded-xl border border-rose-800/40 flex items-center justify-center space-x-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Account</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ADD/EDIT FOOD ITEM MODAL */}
       {isFoodModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -517,7 +513,7 @@ export const AdminDashboard: React.FC = () => {
                   required
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -526,7 +522,7 @@ export const AdminDashboard: React.FC = () => {
                 <select
                   value={foodCategoryId}
                   onChange={(e) => setFoodCategoryId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -544,7 +540,7 @@ export const AdminDashboard: React.FC = () => {
                     required
                     value={foodPrice}
                     onChange={(e) => setFoodPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                   />
                 </div>
                 <div>
@@ -554,20 +550,59 @@ export const AdminDashboard: React.FC = () => {
                     required
                     value={foodPrepTime}
                     onChange={(e) => setFoodPrepTime(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={foodImage}
-                  onChange={(e) => setFoodImage(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
-                />
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Food Item Image</label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl flex items-center space-x-1.5 border border-slate-700 transition-all shrink-0"
+                    >
+                      <Upload className="w-4 h-4 text-purple-400" />
+                      <span>Browse File</span>
+                    </button>
+
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL (https://...)"
+                      value={foodImage}
+                      onChange={(e) => setFoodImage(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500 truncate"
+                    />
+                  </div>
+
+                  {foodImage && (
+                    <div className="relative w-fit pt-1">
+                      <img
+                        src={foodImage}
+                        alt="Food preview"
+                        className="w-16 h-16 object-cover rounded-xl border border-slate-700 shadow-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFoodImage('')}
+                        className="absolute top-0 -right-2 p-1 bg-rose-600 hover:bg-rose-500 text-white rounded-full shadow-lg transition-all"
+                        title="Remove Image"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center space-x-2 pt-2">
@@ -585,7 +620,7 @@ export const AdminDashboard: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-lg"
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-purple-600/30"
               >
                 Save Food Item
               </button>
@@ -594,74 +629,87 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* CREATE STAFF ACCOUNT MODAL */}
-      {isUserModalOpen && (
+      {/* SET/CHANGE ADMIN PASSWORD MODAL */}
+      {isAdminPassModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-slate-100 text-base">Create Staff Account</h3>
-              <button onClick={() => setIsUserModalOpen(false)} className="text-slate-400 hover:text-white">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-purple-500/20 text-purple-400 rounded-xl">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-100 text-base">
+                  {user?.hasAdminPassword ? 'Change Admin Password' : 'Set Admin Password'}
+                </h3>
+              </div>
+              <button onClick={() => setIsAdminPassModalOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="space-y-3">
+            <p className="text-xs text-slate-400">
+              Set a password required when opening the Admin Dashboard. Leave blank to remove password protection.
+            </p>
+
+            {adminPassError && (
+              <div className="p-3 bg-rose-950/50 border border-rose-800/60 rounded-xl text-rose-300 text-xs">
+                {adminPassError}
+              </div>
+            )}
+
+            {adminPassSuccess && (
+              <div className="p-3 bg-emerald-950/50 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs">
+                {adminPassSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveAdminPassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. John Waiter"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
-                />
+                <label className="block text-xs font-semibold text-slate-300 mb-1">New Admin Password</label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                  <input
+                    type="password"
+                    placeholder="Enter new password (or leave empty to remove)"
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="staff@restaurant.com"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
-                />
-              </div>
+              {newAdminPassword && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Confirm Admin Password</label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                    <input
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={confirmAdminPassword}
+                      onChange={(e) => setConfirmAdminPassword(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Role</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100"
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAdminPassModalOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
                 >
-                  <option value="WAITER">WAITER</option>
-                  <option value="KITCHEN">KITCHEN</option>
-                  <option value="CASHIER">CASHIER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPass}
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg"
+                >
+                  {isSavingPass ? 'Saving...' : 'Save Password'}
+                </button>
               </div>
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-lg"
-              >
-                Create Staff User
-              </button>
             </form>
           </div>
         </div>

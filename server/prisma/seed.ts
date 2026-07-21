@@ -74,16 +74,16 @@ async function main() {
 
   // 3. Create Tables
   const tableData = [
-    { tableNumber: 1, capacity: 2, status: TableStatus.AVAILABLE },
-    { tableNumber: 2, capacity: 2, status: TableStatus.AVAILABLE },
-    { tableNumber: 3, capacity: 4, status: TableStatus.AVAILABLE },
-    { tableNumber: 4, capacity: 4, status: TableStatus.AVAILABLE },
-    { tableNumber: 5, capacity: 4, status: TableStatus.AVAILABLE },
-    { tableNumber: 6, capacity: 6, status: TableStatus.AVAILABLE },
-    { tableNumber: 7, capacity: 6, status: TableStatus.AVAILABLE },
-    { tableNumber: 8, capacity: 8, status: TableStatus.AVAILABLE },
-    { tableNumber: 9, capacity: 8, status: TableStatus.AVAILABLE },
-    { tableNumber: 10, capacity: 10, status: TableStatus.AVAILABLE },
+    { tableNumber: 1, capacity: 2, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 2, capacity: 2, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 3, capacity: 4, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 4, capacity: 4, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 5, capacity: 4, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 6, capacity: 6, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 7, capacity: 6, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 8, capacity: 8, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 9, capacity: 8, status: TableStatus.AVAILABLE, userId: admin.id },
+    { tableNumber: 10, capacity: 10, status: TableStatus.AVAILABLE, userId: admin.id },
   ];
 
   for (const t of tableData) {

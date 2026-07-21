@@ -16,7 +16,7 @@ const playChime = () => {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
-    
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -44,8 +44,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     // Socket.io client initialization
-    const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '/';
-    const socketInstance = io(backendUrl, {
+    const socketInstance = io('/', {
       transports: ['websocket', 'polling'],
     });
 
