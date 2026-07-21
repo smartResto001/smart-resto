@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const tableController_1 = require("../controllers/tableController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const types_1 = require("../types");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticateJWT);
+router.get('/', tableController_1.getAllTables);
+router.put('/:id/status', tableController_1.updateTableStatus);
+router.post('/', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), tableController_1.createTable);
+router.delete('/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), tableController_1.deleteTable);
+exports.default = router;

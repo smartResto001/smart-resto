@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const menuController_1 = require("../controllers/menuController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const types_1 = require("../types");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticateJWT);
+router.get('/', menuController_1.getMenu);
+router.post('/categories', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.createCategory);
+router.post('/items', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.createFoodItem);
+router.put('/items/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.updateFoodItem);
+router.delete('/items/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.deleteFoodItem);
+exports.default = router;

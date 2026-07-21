@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const billingController_1 = require("../controllers/billingController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const types_1 = require("../types");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticateJWT);
+router.post('/payment', (0, authMiddleware_1.authorizeRoles)(types_1.Role.CASHIER, types_1.Role.ADMIN), billingController_1.processPayment);
+router.get('/unbilled', (0, authMiddleware_1.authorizeRoles)(types_1.Role.CASHIER, types_1.Role.ADMIN), billingController_1.getUnbilledOrders);
+router.get('/history', (0, authMiddleware_1.authorizeRoles)(types_1.Role.CASHIER, types_1.Role.ADMIN), billingController_1.getPaymentHistory);
+exports.default = router;
