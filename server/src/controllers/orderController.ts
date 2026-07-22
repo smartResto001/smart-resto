@@ -20,182 +20,79 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 
     const userId = table.userId || req.user?.id;
 
-    // Check if there is already an active (unbilled / uncompleted) order for this table
-    const activeOrder = await prisma.order.findFirst({
-      where: {
+    // Create brand new Order ticket in DB
+    const count = await prisma.order.count({ where: userId ? { userId } : {} });
+    const tokenNumber = (count % 999) + 1;
+    const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${tokenNumber.toString().padStart(3, '0')}`;
+
+    let totalAmount = 0;
+    const orderItemsData = [];
+
+    for (const item of items) {
+      const foodItem = await prisma.foodItem.findUnique({ where: { id: item.foodItemId } });
+      if (!foodItem) continue;
+
+      const itemTotal = foodItem.price * item.quantity;
+      totalAmount += itemTotal;
+
+      orderItemsData.push({
+        foodItemId: item.foodItemId,
+        quantity: item.quantity,
+        unitPrice: foodItem.price,
+        notes: item.notes || null,
+      });
+    }
+
+    const taxAmount = totalAmount * 0.05; // 5% GST default
+    const grandTotal = totalAmount + taxAmount;
+    const finalCustomerName = (customerName && customerName.trim()) || `Guest Table ${table.tableNumber}`;
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        tokenNumber,
+        customerName: finalCustomerName,
         tableId,
-        status: { notIn: ['COMPLETED', 'PAID', 'CANCELLED'] },
+        waiterId,
+        userId,
+        status: OrderStatus.PENDING,
+        totalAmount,
+        taxAmount,
+        grandTotal,
+        specialInstructions,
+        items: {
+          create: orderItemsData,
+        },
       },
       include: {
-        items: true,
+        table: true,
+        waiter: { select: { name: true, email: true } },
+        items: {
+          include: {
+            foodItem: true,
+          },
+        },
       },
     });
 
-    let order;
+    // Update Table status to OCCUPIED
+    await prisma.table.update({
+      where: { id: tableId },
+      data: { status: TableStatus.OCCUPIED },
+    });
 
-    if (activeOrder) {
-      // Append items to the existing active order for this running table tab!
-      let addedTotal = 0;
-      const newlyAddedItemNames: string[] = [];
+    // Broadcast Real-time Socket.IO Notifications to Kitchen & Cashier!
+    const io = getSocketIO();
+    if (io) {
+      const targetRoom = userId ? `account:${userId}` : null;
+      const emitTo = targetRoom ? io.to(targetRoom) : io;
 
-      for (const item of items) {
-        const foodItem = await prisma.foodItem.findUnique({ where: { id: item.foodItemId } });
-        if (!foodItem) continue;
-
-        const itemTotal = foodItem.price * item.quantity;
-        addedTotal += itemTotal;
-        newlyAddedItemNames.push(`${item.quantity}x ${foodItem.name}`);
-
-        // Check if item already exists in current active order
-        const existingOrderItem = activeOrder.items.find((i) => i.foodItemId === item.foodItemId);
-        if (existingOrderItem) {
-          await prisma.orderItem.update({
-            where: { id: existingOrderItem.id },
-            data: {
-              quantity: existingOrderItem.quantity + item.quantity,
-              notes: item.notes || existingOrderItem.notes,
-            },
-          });
-        } else {
-          await prisma.orderItem.create({
-            data: {
-              orderId: activeOrder.id,
-              foodItemId: item.foodItemId,
-              quantity: item.quantity,
-              unitPrice: foodItem.price,
-              notes: item.notes || null,
-            },
-          });
-        }
-      }
-
-      const updatedTotalAmount = activeOrder.totalAmount + addedTotal;
-      const updatedTaxAmount = updatedTotalAmount * 0.05;
-      const updatedGrandTotal = updatedTotalAmount + updatedTaxAmount - activeOrder.discountAmount;
-
-      const combinedInstructions = specialInstructions
-        ? activeOrder.specialInstructions
-          ? `${activeOrder.specialInstructions} | ${specialInstructions}`
-          : specialInstructions
-        : activeOrder.specialInstructions;
-
-      const finalCustomerName = (customerName && customerName.trim()) || activeOrder.customerName || `Guest Table ${table.tableNumber}`;
-
-      // Update Order total and set status to PREPARING for kitchen to cook new items
-      order = await prisma.order.update({
-        where: { id: activeOrder.id },
-        data: {
-          customerName: finalCustomerName,
-          totalAmount: updatedTotalAmount,
-          taxAmount: updatedTaxAmount,
-          grandTotal: updatedGrandTotal,
-          specialInstructions: combinedInstructions,
-          status: OrderStatus.PREPARING,
-        },
-        include: {
-          table: true,
-          waiter: { select: { name: true, email: true } },
-          items: {
-            include: {
-              foodItem: true,
-            },
-          },
-        },
+      emitTo.emit('order:created', order);
+      emitTo.emit('notification:new', {
+        title: 'New Order Received',
+        message: `Order #${order.orderNumber} for Table ${table.tableNumber} (${order.customerName})`,
+        roleTarget: Role.KITCHEN,
       });
-
-      // Update table status to OCCUPIED
-      await prisma.table.update({
-        where: { id: tableId },
-        data: { status: TableStatus.OCCUPIED },
-      });
-
-      // Broadcast Real-time Socket.IO Notifications to Kitchen & Cashier
-      const io = getSocketIO();
-      if (io) {
-        const targetRoom = userId ? `account:${userId}` : null;
-        const emitTo = targetRoom ? io.to(targetRoom) : io;
-
-        emitTo.emit('order:status_changed', order);
-        emitTo.emit('notification:new', {
-          title: 'Additional Items Added',
-          message: `Table ${table.tableNumber} added: ${newlyAddedItemNames.join(', ')}`,
-          roleTarget: Role.KITCHEN,
-        });
-      }
-    } else {
-      // Create brand new Order in DB
-      const count = await prisma.order.count({ where: userId ? { userId } : {} });
-      const tokenNumber = (count % 999) + 1;
-      const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${tokenNumber.toString().padStart(3, '0')}`;
-
-      let totalAmount = 0;
-      const orderItemsData = [];
-
-      for (const item of items) {
-        const foodItem = await prisma.foodItem.findUnique({ where: { id: item.foodItemId } });
-        if (!foodItem) continue;
-
-        const itemTotal = foodItem.price * item.quantity;
-        totalAmount += itemTotal;
-
-        orderItemsData.push({
-          foodItemId: item.foodItemId,
-          quantity: item.quantity,
-          unitPrice: foodItem.price,
-          notes: item.notes || null,
-        });
-      }
-
-      const taxAmount = totalAmount * 0.05; // 5% GST default
-      const grandTotal = totalAmount + taxAmount;
-
-      order = await prisma.order.create({
-        data: {
-          orderNumber,
-          tokenNumber,
-          customerName,
-          tableId,
-          waiterId,
-          userId,
-          status: OrderStatus.PENDING,
-          totalAmount,
-          taxAmount,
-          grandTotal,
-          specialInstructions,
-          items: {
-            create: orderItemsData,
-          },
-        },
-        include: {
-          table: true,
-          waiter: { select: { name: true, email: true } },
-          items: {
-            include: {
-              foodItem: true,
-            },
-          },
-        },
-      });
-
-      // Update Table status to OCCUPIED
-      await prisma.table.update({
-        where: { id: tableId },
-        data: { status: TableStatus.OCCUPIED },
-      });
-
-      // Broadcast Real-time Socket.IO Notifications to Kitchen & Cashier!
-      const io = getSocketIO();
-      if (io) {
-        const targetRoom = userId ? `account:${userId}` : null;
-        const emitTo = targetRoom ? io.to(targetRoom) : io;
-
-        emitTo.emit('order:created', order);
-        emitTo.emit('notification:new', {
-          title: 'New Order Received',
-          message: `Order #${order.orderNumber} for Table ${table.tableNumber} (${order.customerName})`,
-          roleTarget: Role.KITCHEN,
-        });
-      }
     }
 
     return res.status(201).json({ success: true, data: order });

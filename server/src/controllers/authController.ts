@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma';
+import { isGmailAccount, sendWelcomeEmail } from '../services/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smart_resto_super_secret_jwt_key_2026';
 
@@ -100,11 +101,18 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
 
+    if (!isGmailAccount(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "This mail doesn't exist as a valid Gmail account (@gmail.com). Only existing Google Mail accounts can be used to create an account.",
+      });
+    }
+
     const validRoles = ['ADMIN', 'WAITER', 'KITCHEN', 'CASHIER'];
     const userRole = role && validRoles.includes(role.toUpperCase()) ? role.toUpperCase() : 'WAITER';
 
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.trim().toLowerCase() },
     });
 
     if (existingUser) {
@@ -116,11 +124,14 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: email.trim().toLowerCase(),
         password: hashedPassword,
         role: userRole,
       },
     });
+
+    // Send welcome email notification asynchronously
+    sendWelcomeEmail(user.email, user.name, user.role);
 
     const token = jwt.sign(
       {

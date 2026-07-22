@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma';
 import { Role } from '../types';
+import { isGmailAccount, sendWelcomeEmail } from '../services/emailService';
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -30,11 +31,18 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
+    if (!isGmailAccount(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "This mail doesn't exist as a valid Gmail account (@gmail.com). Only existing Google Mail accounts can be used to create an account.",
+      });
+    }
+
     if (!Object.values(Role).includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
     if (existing) {
       return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
@@ -44,7 +52,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: email.trim().toLowerCase(),
         password: hashedPassword,
         role: role as Role,
       },
@@ -56,6 +64,9 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         createdAt: true,
       },
     });
+
+    // Send welcome email notification asynchronously
+    sendWelcomeEmail(user.email, user.name, user.role);
 
     return res.status(201).json({ success: true, data: user });
   } catch (error) {

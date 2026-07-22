@@ -13,8 +13,9 @@ export const BillingDashboard: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Billing Controls State
-  const [taxPercent, setTaxPercent] = useState<number>(5); // Default 5% GST
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [taxPercent, setTaxPercent] = useState<number>(5); // Alterable Tax Rate (%)
+  const [discountType, setDiscountType] = useState<'PERCENT' | 'AMOUNT'>('PERCENT');
+  const [discountInput, setDiscountInput] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [paidAmountInput, setPaidAmountInput] = useState<string>('');
   const [transactionId, setTransactionId] = useState<string>('');
@@ -31,19 +32,17 @@ export const BillingDashboard: React.FC = () => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('order:created', (newOrder: Order) => {
+    socket.on('order:created', () => {
       playNotificationSound();
-      setUnbilledOrders((prev) => [newOrder, ...prev]);
+      fetchUnbilledOrders();
     });
 
-    socket.on('order:status_changed', (updatedOrder: Order) => {
-      setUnbilledOrders((prev) =>
-        prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-      );
+    socket.on('order:status_changed', () => {
+      fetchUnbilledOrders();
     });
 
-    socket.on('payment:completed', (data: any) => {
-      setUnbilledOrders((prev) => prev.filter((o) => o.id !== data.order.id));
+    socket.on('payment:completed', () => {
+      fetchUnbilledOrders();
     });
 
     return () => {
@@ -67,14 +66,28 @@ export const BillingDashboard: React.FC = () => {
 
   const handleSelectOrder = (order: Order) => {
     setSelectedOrder(order);
-    setDiscountAmount(0);
+    setDiscountInput('');
     setPaidAmountInput('');
     setTransactionId('');
   };
 
   // Calculations
   const subtotal = selectedOrder ? selectedOrder.totalAmount : 0;
-  const taxAmount = (subtotal * taxPercent) / 100;
+
+  let discountAmount = 0;
+  let discountPercent = 0;
+
+  const numericDiscountInput = parseFloat(discountInput) || 0;
+  if (discountType === 'PERCENT') {
+    discountPercent = numericDiscountInput;
+    discountAmount = (subtotal * discountPercent) / 100;
+  } else {
+    discountAmount = numericDiscountInput;
+    discountPercent = subtotal > 0 ? (discountAmount / subtotal) * 100 : 0;
+  }
+
+  const effectiveTaxPercent = Math.max(0, taxPercent || 0);
+  const taxAmount = (subtotal * effectiveTaxPercent) / 100;
   const grandTotal = Math.max(0, subtotal + taxAmount - discountAmount);
   const paidAmount = parseFloat(paidAmountInput) || grandTotal;
   const balance = Math.max(0, paidAmount - grandTotal);
@@ -217,19 +230,41 @@ export const BillingDashboard: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Adjustments: GST & Discount */}
-                <div className="grid grid-cols-2 gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">GST Tax Rate</label>
-                    <div className="flex gap-2">
-                      {[5, 18].map((rate) => (
+                {/* Adjustments: Custom GST Tax Rate & Flexible Discount (% / ₹) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
+                  {/* GST Tax Rate Column */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[11px] font-bold text-slate-300">GST Tax Rate</label>
+                      <span className="text-[10px] text-amber-400 font-mono font-bold">{effectiveTaxPercent}% Tax</span>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={taxPercent === 0 ? '' : taxPercent}
+                        onChange={(e) => setTaxPercent(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        placeholder="Tax % (e.g. 5)"
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">%</span>
+                    </div>
+
+                    {/* Presets */}
+                    <div className="flex gap-1.5 pt-0.5">
+                      {[0, 5, 12, 18, 28].map((rate) => (
                         <button
                           key={rate}
+                          type="button"
                           onClick={() => setTaxPercent(rate)}
-                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${taxPercent === rate
-                              ? 'bg-amber-500 text-slate-950'
-                              : 'bg-slate-800 text-slate-400'
-                            }`}
+                          className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                            taxPercent === rate
+                              ? 'bg-amber-500 text-slate-950 shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
                         >
                           {rate}%
                         </button>
@@ -237,16 +272,53 @@ export const BillingDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Discount Amount (₹)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={discountAmount || ''}
-                      onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                      placeholder="0"
-                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
-                    />
+                  {/* Discount Column */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[11px] font-bold text-slate-300">Discount</label>
+
+                      {/* Mode Switcher */}
+                      <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType('PERCENT')}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                            discountType === 'PERCENT' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          % Percent
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType('AMOUNT')}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                            discountType === 'AMOUNT' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ₹ Amount
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        placeholder={discountType === 'PERCENT' ? 'Discount % (e.g. 10)' : 'Discount ₹ (e.g. 50)'}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-slate-100 focus:outline-none focus:border-amber-500"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">
+                        {discountType === 'PERCENT' ? '%' : '₹'}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-emerald-400 font-bold flex justify-between pt-0.5">
+                      <span>Discount Off: -₹{discountAmount.toFixed(2)}</span>
+                      <span>({discountPercent.toFixed(1)}%)</span>
+                    </div>
                   </div>
                 </div>
 
@@ -305,12 +377,12 @@ export const BillingDashboard: React.FC = () => {
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
-                    <span>GST ({taxPercent}%):</span>
+                    <span>GST ({effectiveTaxPercent}%):</span>
                     <span>+₹{taxAmount.toFixed(2)}</span>
                   </div>
                   {discountAmount > 0 && (
-                    <div className="flex justify-between text-emerald-400">
-                      <span>Discount:</span>
+                    <div className="flex justify-between text-emerald-400 font-semibold">
+                      <span>Discount ({discountPercent.toFixed(1)}%):</span>
                       <span>-₹{discountAmount.toFixed(2)}</span>
                     </div>
                   )}

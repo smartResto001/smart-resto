@@ -34,6 +34,9 @@ export const KitchenDashboard: React.FC = () => {
       if (['PAID', 'COMPLETED', 'CANCELLED'].includes(updatedOrder.status)) {
         setOrders((prev) => prev.filter((o) => o.id !== updatedOrder.id));
       } else {
+        if (updatedOrder.status === 'PREPARING') {
+          playNotificationSound();
+        }
         setOrders((prev) => {
           const exists = prev.some((o) => o.id === updatedOrder.id);
           if (exists) {
@@ -222,10 +225,10 @@ export const KitchenDashboard: React.FC = () => {
                   {order.status === 'PENDING' && (
                     <button
                       onClick={() => handleUpdateStatus(order.id, 'PREPARING')}
-                      className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold rounded-2xl text-xs flex items-center justify-center space-x-2 shadow-lg transition-all"
+                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-2xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
                     >
                       <Flame className="w-4 h-4" />
-                      <span>START PREPARING</span>
+                      <span>ORDER TAKEN (START PREPARING)</span>
                     </button>
                   )}
 

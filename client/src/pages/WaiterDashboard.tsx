@@ -222,15 +222,15 @@ export const WaiterDashboard: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-xs font-semibold">Pending</span>;
+        return <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-[11px] font-semibold">Order Placed</span>;
       case 'PREPARING':
-        return <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-semibold animate-pulse">Preparing</span>;
+        return <span className="px-2.5 py-1 bg-orange-500/20 text-orange-300 border border-orange-500/30 rounded-full text-[11px] font-semibold animate-pulse flex items-center gap-1">🔥 Preparing</span>;
       case 'READY':
-        return <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-semibold">Ready to Serve</span>;
+        return <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[11px] font-semibold">✓ Ready to Serve</span>;
       case 'SERVED':
-        return <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-xs font-semibold">Served</span>;
+        return <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-[11px] font-semibold">Served</span>;
       default:
-        return <span className="px-2.5 py-1 bg-slate-800 text-slate-400 rounded-full text-xs">{status}</span>;
+        return <span className="px-2.5 py-1 bg-slate-800 text-slate-400 rounded-full text-[11px]">{status}</span>;
     }
   };
 
@@ -296,8 +296,15 @@ export const WaiterDashboard: React.FC = () => {
       {activeTab === 'tables' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {tables.map((table) => {
-            const hasOrder = table.orders && table.orders.length > 0;
-            const activeOrder = hasOrder ? table.orders![0] : null;
+            const activeOrders = table.orders || [];
+
+            // Sort orders by urgency priority: READY (1) > PREPARING (2) > PENDING (3) > SERVED (4)
+            const sortedOrders = [...activeOrders].sort((a, b) => {
+              const priority: Record<string, number> = { READY: 1, PREPARING: 2, PENDING: 3, SERVED: 4 };
+              return (priority[a.status] || 99) - (priority[b.status] || 99);
+            });
+
+            const topOrder = sortedOrders[0] || null;
 
             return (
               <div
@@ -321,11 +328,33 @@ export const WaiterDashboard: React.FC = () => {
                     <span>Cap: {table.capacity} Persons</span>
                   </div>
 
-                  {activeOrder && (
-                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs mb-3 space-y-1">
-                      <div className="font-bold text-slate-200 truncate">{activeOrder.customerName}</div>
-                      <div className="text-[10px] text-amber-400">Order #{activeOrder.orderNumber}</div>
-                      <div className="text-[10px] text-slate-400">Status: {activeOrder.status}</div>
+                  {topOrder && (
+                    <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs mb-3 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="font-bold text-slate-200 truncate">{topOrder.customerName}</div>
+                        {activeOrders.length > 1 && (
+                          <span className="text-[9px] bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded-md font-bold">
+                            +{activeOrders.length - 1} more
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-amber-400 font-mono">#{topOrder.orderNumber}</div>
+                      <div className="flex items-center justify-between pt-0.5">
+                        {getStatusBadge(topOrder.status)}
+                      </div>
+
+                      {topOrder.status === 'READY' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkServed(topOrder.id);
+                          }}
+                          className="w-full mt-1.5 py-1.5 px-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition-all animate-pulse shadow-md"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Mark Served</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

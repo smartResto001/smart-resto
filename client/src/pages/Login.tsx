@@ -42,6 +42,12 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (isSignUp && (!email || !email.trim().toLowerCase().endsWith('@gmail.com'))) {
+      setError("This mail doesn't exist as a valid Gmail account (@gmail.com). Only existing Google Mail accounts can be used to create an account.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -133,13 +139,18 @@ export const Login: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">Email Address</label>
+              {isSignUp && (
+                <span className="text-[10px] font-bold text-amber-400">Gmail only (@gmail.com)</span>
+              )}
+            </div>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
               <input
                 type="email"
                 required
-                placeholder="user@restaurant.com"
+                placeholder={isSignUp ? 'yourname@gmail.com' : 'user@gmail.com'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
