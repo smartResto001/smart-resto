@@ -128,6 +128,25 @@ export const deleteTable = async (req: Request, res: Response, next: NextFunctio
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
+    // Clean up all associated orders, order items, and payments to avoid foreign key constraints
+    const associatedOrders = await prisma.order.findMany({
+      where: { tableId: id },
+      select: { id: true },
+    });
+
+    if (associatedOrders.length > 0) {
+      const orderIds = associatedOrders.map((o) => o.id);
+      await prisma.payment.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await prisma.orderItem.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await prisma.order.deleteMany({
+        where: { id: { in: orderIds } },
+      });
+    }
+
     await prisma.table.delete({ where: { id } });
 
     const io = getSocketIO();

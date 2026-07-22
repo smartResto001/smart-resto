@@ -192,6 +192,9 @@ export const deleteFoodItem = async (req: Request, res: Response, next: NextFunc
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
+    // Clean up any order items referencing this food item
+    await prisma.orderItem.deleteMany({ where: { foodItemId: id } });
+
     await prisma.foodItem.delete({ where: { id } });
 
     return res.status(200).json({ success: true, message: 'Food item deleted successfully' });

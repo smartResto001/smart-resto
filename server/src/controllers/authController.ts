@@ -171,7 +171,7 @@ export const setAdminPassword = async (req: Request, res: Response, next: NextFu
     }
 
     let hashedAdminPassword: string | null = null;
-    if (adminPassword && adminPassword.trim() !== '') {
+    if (adminPassword && typeof adminPassword === 'string' && adminPassword.trim() !== '') {
       hashedAdminPassword = await bcrypt.hash(adminPassword.trim(), 10);
     }
 
@@ -212,7 +212,7 @@ export const verifyAdminPassword = async (req: Request, res: Response, next: Nex
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
-    if (!password) {
+    if (!password || typeof password !== 'string' || password.trim() === '') {
       return res.status(400).json({ success: false, message: 'Password is required' });
     }
 
@@ -228,12 +228,12 @@ export const verifyAdminPassword = async (req: Request, res: Response, next: Nex
 
     // 1. Check custom Admin passcode if set
     if (user.adminPassword) {
-      isMatch = await bcrypt.compare(password, user.adminPassword);
+      isMatch = await bcrypt.compare(String(password), user.adminPassword);
     }
 
     // 2. Fallback to main Account Login password
     if (!isMatch && user.password) {
-      isMatch = await bcrypt.compare(password, user.password);
+      isMatch = await bcrypt.compare(String(password), user.password);
     }
 
     if (!isMatch) {
@@ -258,7 +258,7 @@ export const resetAdminPasswordWithAccountPassword = async (req: Request, res: R
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
-    if (!accountPassword) {
+    if (!accountPassword || typeof accountPassword !== 'string' || accountPassword.trim() === '') {
       return res.status(400).json({ success: false, message: 'Account login password is required' });
     }
 
@@ -270,13 +270,17 @@ export const resetAdminPasswordWithAccountPassword = async (req: Request, res: R
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const isMatch = await bcrypt.compare(accountPassword, user.password);
+    if (!user.password) {
+      return res.status(400).json({ success: false, message: 'User password not set' });
+    }
+
+    const isMatch = await bcrypt.compare(String(accountPassword), user.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: 'Incorrect Account Login password' });
     }
 
     let hashedAdminPassword: string | null = null;
-    if (newAdminPassword && newAdminPassword.trim() !== '') {
+    if (newAdminPassword && typeof newAdminPassword === 'string' && newAdminPassword.trim() !== '') {
       hashedAdminPassword = await bcrypt.hash(newAdminPassword.trim(), 10);
     }
 

@@ -91,9 +91,9 @@ model Order {
   customerId          String?
   customer            Customer?   @relation(fields: [customerId], references: [id])
   tableId             String
-  table               Table       @relation(fields: [tableId], references: [id])
+  table               Table       @relation(fields: [tableId], references: [id], onDelete: Cascade)
   waiterId            String?
-  waiter              User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
+  waiter              User?       @relation("WaiterOrders", fields: [waiterId], references: [id], onDelete: SetNull)
   userId              String?
   user                User?       @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
   status              String      @default("PENDING") // PENDING, ACCEPTED, PREPARING, READY, SERVED, COMPLETED, PAID, CANCELLED
@@ -119,7 +119,7 @@ model OrderItem {
   orderId    String
   order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   foodItemId String
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
   quantity   Int      @default(1)
   unitPrice  Float
   notes      String?
@@ -131,7 +131,7 @@ model OrderItem {
 model Payment {
   id            String   @id @default(uuid())
   orderId       String   @unique
-  order         Order    @relation(fields: [orderId], references: [id])
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   cashierId     String?
   cashier       User?    @relation(fields: [cashierId], references: [id])
   userId        String?

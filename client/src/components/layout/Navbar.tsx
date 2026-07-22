@@ -32,14 +32,19 @@ export const Navbar: React.FC = () => {
 
         {/* Brand Logo & Title */}
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/role-selection')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
             <UtensilsCrossed className="w-6 h-6 text-slate-950" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-slate-100 leading-none tracking-tight font-sans">
-              Smart<span className="text-amber-400">Resto</span>
-            </h1>
-            <p className="text-[11px] text-slate-400 font-medium">RMS Workstation</p>
+            <div className="flex items-center space-x-2">
+              <h1 className="font-bold text-lg text-slate-100 leading-none tracking-tight font-sans">
+                Smart<span className="text-amber-400">Resto</span>
+              </h1>
+              <span className="md:hidden px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                📱 Mobile
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">RMS Workstation</p>
           </div>
         </div>
 
