@@ -31,14 +31,30 @@ export const KitchenDashboard: React.FC = () => {
     });
 
     socket.on('order:status_changed', (updatedOrder: Order) => {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-      );
+      if (['PAID', 'COMPLETED', 'CANCELLED'].includes(updatedOrder.status)) {
+        setOrders((prev) => prev.filter((o) => o.id !== updatedOrder.id));
+      } else {
+        setOrders((prev) => {
+          const exists = prev.some((o) => o.id === updatedOrder.id);
+          if (exists) {
+            return prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+          }
+          return [updatedOrder, ...prev];
+        });
+      }
+    });
+
+    socket.on('payment:completed', (data: any) => {
+      const paidOrderId = data.order?.id || data.orderId;
+      if (paidOrderId) {
+        setOrders((prev) => prev.filter((o) => o.id !== paidOrderId));
+      }
     });
 
     return () => {
       socket.off('order:created');
       socket.off('order:status_changed');
+      socket.off('payment:completed');
     };
   }, [socket]);
 
@@ -87,6 +103,7 @@ export const KitchenDashboard: React.FC = () => {
   };
 
   const filteredOrders = orders.filter((o) => {
+    if (['PAID', 'COMPLETED', 'CANCELLED'].includes(o.status)) return false;
     if (filterStatus === 'ALL') return true;
     return o.status === filterStatus;
   });
