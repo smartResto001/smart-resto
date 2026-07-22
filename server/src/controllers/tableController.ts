@@ -39,9 +39,18 @@ export const updateTableStatus = async (req: Request, res: Response, next: NextF
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const userId = req.user?.id;
 
     if (!Object.values(TableStatus).includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid table status' });
+    }
+
+    const existingTable = await prisma.table.findUnique({ where: { id } });
+    if (!existingTable) {
+      return res.status(404).json({ success: false, message: 'Table not found' });
+    }
+    if (existingTable.userId && existingTable.userId !== userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
     const table = await prisma.table.update({
@@ -52,7 +61,12 @@ export const updateTableStatus = async (req: Request, res: Response, next: NextF
     // Notify via Socket.IO
     const io = getSocketIO();
     if (io) {
-      io.emit('table:updated', table);
+      const targetRoom = table.userId ? `account:${table.userId}` : null;
+      if (targetRoom) {
+        io.to(targetRoom).emit('table:updated', table);
+      } else {
+        io.emit('table:updated', table);
+      }
     }
 
     return res.status(200).json({ success: true, data: table });
@@ -92,7 +106,7 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
 
     const io = getSocketIO();
     if (io) {
-      io.emit('table:updated', table);
+      io.to(`account:${userId}`).emit('table:updated', table);
     }
 
     return res.status(201).json({ success: true, data: table });
@@ -104,12 +118,26 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
 export const deleteTable = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
+
+    const existingTable = await prisma.table.findUnique({ where: { id } });
+    if (!existingTable) {
+      return res.status(404).json({ success: false, message: 'Table not found' });
+    }
+    if (existingTable.userId && existingTable.userId !== userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
 
     await prisma.table.delete({ where: { id } });
 
     const io = getSocketIO();
     if (io) {
-      io.emit('table:deleted', { id });
+      const targetRoom = existingTable.userId ? `account:${existingTable.userId}` : null;
+      if (targetRoom) {
+        io.to(targetRoom).emit('table:deleted', { id });
+      } else {
+        io.emit('table:deleted', { id });
+      }
     }
 
     return res.status(200).json({ success: true, message: 'Table deleted successfully' });

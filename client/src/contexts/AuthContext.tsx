@@ -74,6 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    if (user?.id) {
+      sessionStorage.removeItem(`admin_unlocked_${user.id}`);
+    }
+    sessionStorage.removeItem('admin_unlocked');
     setUser(null);
     setToken(null);
     localStorage.removeItem('resto_token');

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Category, FoodItem, Table, DashboardStats } from '../types';
@@ -6,10 +7,17 @@ import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, Trendi
 
 export const AdminDashboard: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'analytics' | 'menu' | 'tables'>('analytics');
 
   // Stats State
   const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  // Category State
+  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
 
   // Menu State
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,10 +48,17 @@ export const AdminDashboard: React.FC = () => {
   const [isSavingPass, setIsSavingPass] = useState(false);
 
   useEffect(() => {
+    if (user?.id) {
+      const isUnlocked = sessionStorage.getItem(`admin_unlocked_${user.id}`) === 'true';
+      if (!isUnlocked) {
+        navigate('/role-selection?unlockAdmin=true', { replace: true });
+        return;
+      }
+    }
     fetchDashboardStats();
     fetchMenu();
     fetchTables();
-  }, []);
+  }, [user, navigate]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -57,13 +72,65 @@ export const AdminDashboard: React.FC = () => {
   const fetchMenu = async () => {
     try {
       const res = await API.get('/menu');
-      setCategories(res.data.data.categories);
-      setFoodItems(res.data.data.foodItems);
-      if (res.data.data.categories.length > 0 && !foodCategoryId) {
-        setFoodCategoryId(res.data.data.categories[0].id);
+      const fetchedCats = res.data.data.categories || [];
+      setCategories(fetchedCats);
+      setFoodItems(res.data.data.foodItems || []);
+      if (fetchedCats.length > 0) {
+        setFoodCategoryId((prev) => prev || fetchedCats[0].id);
       }
     } catch (err) {
       console.error('Failed to fetch menu', err);
+    }
+  };
+
+  const handleOpenCatModal = (cat?: Category) => {
+    if (cat) {
+      setEditingCategory(cat);
+      setNewCatName(cat.name);
+      setNewCatDesc(cat.description || '');
+    } else {
+      setEditingCategory(null);
+      setNewCatName('');
+      setNewCatDesc('');
+    }
+    setIsCatModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    try {
+      if (editingCategory) {
+        await API.put(`/menu/categories/${editingCategory.id}`, {
+          name: newCatName.trim(),
+          description: newCatDesc,
+        });
+      } else {
+        const res = await API.post('/menu/categories', {
+          name: newCatName.trim(),
+          description: newCatDesc,
+        });
+        if (res.data.data?.id) {
+          setFoodCategoryId(res.data.data.id);
+        }
+      }
+      setIsCatModalOpen(false);
+      setEditingCategory(null);
+      setNewCatName('');
+      setNewCatDesc('');
+      await fetchMenu();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to save category');
+    }
+  };
+
+  const handleDeleteCategory = async (id: string, name: string) => {
+    if (!confirm(`Remove category "${name}"? Food items will be preserved and moved to General.`)) return;
+    try {
+      await API.delete(`/menu/categories/${id}`);
+      await fetchMenu();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete category');
     }
   };
 
@@ -150,19 +217,23 @@ export const AdminDashboard: React.FC = () => {
       setFoodPrepTime('15');
       setFoodIsVeg(true);
       setFoodImage('');
+      if (categories.length > 0) {
+        setFoodCategoryId(categories[0].id);
+      }
     }
     setIsFoodModalOpen(true);
   };
 
   const handleSaveFoodItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    const targetCatId = foodCategoryId || (categories.length > 0 ? categories[0].id : '');
     try {
       const payload = {
         name: foodName,
         description: foodDesc,
         price: Number(foodPrice),
         prepTime: Number(foodPrepTime),
-        categoryId: foodCategoryId,
+        categoryId: targetCatId,
         isVeg: foodIsVeg,
         image: foodImage,
       };
@@ -220,6 +291,9 @@ export const AdminDashboard: React.FC = () => {
     try {
       const res = await API.post('/auth/admin-password/set', { adminPassword: newAdminPassword });
       updateUser(res.data.user);
+      if (user?.id) {
+        sessionStorage.setItem(`admin_unlocked_${user.id}`, 'true');
+      }
       setAdminPassSuccess(res.data.message);
       setTimeout(() => {
         setIsAdminPassModalOpen(false);
@@ -382,15 +456,56 @@ export const AdminDashboard: React.FC = () => {
       {/* TAB 2: MENU MANAGEMENT */}
       {activeTab === 'menu' && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="font-bold text-slate-100 text-base">Menu Items ({foodItems.length})</h3>
-            <button
-              onClick={() => handleOpenFoodModal()}
-              className="py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-lg transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Food Item</span>
-            </button>
+          <div className="flex flex-wrap justify-between items-center gap-3">
+            <h3 className="font-bold text-slate-100 text-base">
+              Menu Items ({foodItems.length}) • Categories ({categories.length})
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleOpenCatModal()}
+                className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-xl text-xs flex items-center space-x-1.5 border border-purple-800/40 shadow-md transition-all"
+              >
+                <Plus className="w-4 h-4 text-purple-400" />
+                <span>Add Category</span>
+              </button>
+              <button
+                onClick={() => handleOpenFoodModal()}
+                className="py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-lg transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Food Item</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Manage Categories Strip */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Manage Categories</h4>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200"
+                >
+                  <span className="font-semibold text-purple-300">{c.name}</span>
+                  {c.description && <span className="text-[10px] text-slate-500 hidden sm:inline">({c.description})</span>}
+                  <button
+                    onClick={() => handleOpenCatModal(c)}
+                    className="p-1 text-slate-400 hover:text-amber-400 transition-colors"
+                    title="Edit Category"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(c.id, c.name)}
+                    className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                    title="Delete Category"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -708,6 +823,73 @@ export const AdminDashboard: React.FC = () => {
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg"
                 >
                   {isSavingPass ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT CATEGORY MODAL */}
+      {isCatModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-slate-100 text-base">
+                {editingCategory ? 'Edit Food Category' : 'Add Food Category'}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsCatModalOpen(false);
+                  setEditingCategory(null);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Category Name *</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="e.g. Starter, Main Course, Drinks"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Description (Optional)</label>
+                <textarea
+                  placeholder="Short description of category..."
+                  value={newCatDesc}
+                  onChange={(e) => setNewCatDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500 h-20 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCatModalOpen(false);
+                    setEditingCategory(null);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newCatName.trim()}
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg"
+                >
+                  Save Category
                 </button>
               </div>
             </form>

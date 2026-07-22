@@ -3,14 +3,35 @@ import { prisma } from '../config/prisma';
 
 export const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const totalOrders = await prisma.order.count();
-    const totalCompletedOrders = await prisma.order.count({ where: { status: 'PAID' } });
-    const totalCancelledOrders = await prisma.order.count({ where: { status: 'CANCELLED' } });
+    const userId = req.user?.id;
+
+    const totalOrders = await prisma.order.count({
+      where: userId ? { userId } : {},
+    });
+
+    const totalCompletedOrders = await prisma.order.count({
+      where: {
+        status: 'PAID',
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    const totalCancelledOrders = await prisma.order.count({
+      where: {
+        status: 'CANCELLED',
+        ...(userId ? { userId } : {}),
+      },
+    });
+
     const activeOrdersCount = await prisma.order.count({
-      where: { status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED'] } },
+      where: {
+        status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED'] },
+        ...(userId ? { userId } : {}),
+      },
     });
 
     const totalRevenueAgg = await prisma.payment.aggregate({
+      where: userId ? { userId } : {},
       _sum: { grandTotal: true },
     });
     const totalRevenue = totalRevenueAgg._sum.grandTotal || 0;
@@ -20,6 +41,7 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
     // Top selling foods
     const topFoodsRaw = await prisma.orderItem.groupBy({
       by: ['foodItemId'],
+      where: userId ? { order: { userId } } : {},
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5,
@@ -43,6 +65,7 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
 
     // Recent 10 payments
     const recentPayments = await prisma.payment.findMany({
+      where: userId ? { userId } : {},
       include: {
         order: {
           include: { table: true },

@@ -22,6 +22,7 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    const userId = order.userId || cashierId;
     const balance = Math.max(0, paidAmount - grandTotal);
 
     // Create Payment Record
@@ -30,6 +31,7 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
         orderId,
         cashierId,
         cashierName,
+        userId,
         paymentMethod: paymentMethod as PaymentMethod,
         subtotal: Number(subtotal),
         tax: Number(tax),
@@ -55,21 +57,24 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       },
     });
 
-    // Update Table status to CLEANING or AVAILABLE
+    // Update Table status automatically to AVAILABLE after billing
     await prisma.table.update({
       where: { id: order.tableId },
-      data: { status: TableStatus.CLEANING },
+      data: { status: TableStatus.AVAILABLE },
     });
 
     // Broadcast Socket.IO events
     const io = getSocketIO();
     if (io) {
-      io.emit('payment:completed', {
+      const targetRoom = userId ? `account:${userId}` : null;
+      const emitTo = targetRoom ? io.to(targetRoom) : io;
+
+      emitTo.emit('payment:completed', {
         order: updatedOrder,
         payment,
       });
-      io.emit('order:status_changed', updatedOrder);
-      io.emit('table:updated', { id: order.tableId, status: TableStatus.CLEANING });
+      emitTo.emit('order:status_changed', updatedOrder);
+      emitTo.emit('table:updated', { id: order.tableId, status: TableStatus.AVAILABLE });
     }
 
     return res.status(200).json({
@@ -87,8 +92,11 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
 
 export const getUnbilledOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const userId = req.user?.id;
+
     const orders = await prisma.order.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         status: {
           in: [OrderStatus.READY, OrderStatus.SERVED, OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.ACCEPTED],
         },
@@ -111,7 +119,10 @@ export const getUnbilledOrders = async (req: Request, res: Response, next: NextF
 
 export const getPaymentHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const userId = req.user?.id;
+
     const payments = await prisma.payment.findMany({
+      where: userId ? { userId } : {},
       include: {
         order: {
           include: {

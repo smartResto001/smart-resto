@@ -103,7 +103,14 @@ export const WaiterDashboard: React.FC = () => {
 
   const handleOpenOrderModal = (table: Table) => {
     setSelectedTable(table);
-    setCustomerName('');
+    const hasActiveOrder = table.orders && table.orders.length > 0;
+    const activeOrder = hasActiveOrder ? table.orders![0] : null;
+
+    if (activeOrder && activeOrder.customerName) {
+      setCustomerName(activeOrder.customerName);
+    } else {
+      setCustomerName('');
+    }
     setSpecialInstructions('');
     setCart([]);
     setIsOrderModalOpen(true);
@@ -140,16 +147,20 @@ export const WaiterDashboard: React.FC = () => {
   };
 
   const handleSendOrder = async () => {
-    if (!selectedTable || cart.length === 0 || !customerName.trim()) {
-      alert('Please enter customer name and add at least one food item.');
+    if (!selectedTable || cart.length === 0) {
+      alert('Please add at least one food item.');
       return;
     }
+
+    const hasActiveOrder = selectedTable.orders && selectedTable.orders.length > 0;
+    const activeOrder = hasActiveOrder ? selectedTable.orders![0] : null;
+    const effectiveCustomerName = customerName.trim() || (activeOrder?.customerName ? activeOrder.customerName : `Guest Table ${selectedTable.tableNumber}`);
 
     setIsSubmitting(true);
     try {
       const payload = {
         tableId: selectedTable.id,
-        customerName,
+        customerName: effectiveCustomerName,
         specialInstructions,
         items: cart.map((c) => ({
           foodItemId: c.foodItem.id,
@@ -175,6 +186,15 @@ export const WaiterDashboard: React.FC = () => {
       await API.put(`/orders/${orderId}/status`, { status: 'SERVED' });
     } catch (err) {
       console.error('Failed to update status', err);
+    }
+  };
+
+  const handleMarkTableAvailable = async (tableId: string) => {
+    try {
+      await API.put(`/tables/${tableId}/status`, { status: 'AVAILABLE' });
+      fetchTables();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update table status');
     }
   };
 

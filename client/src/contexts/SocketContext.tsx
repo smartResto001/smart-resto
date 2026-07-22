@@ -69,6 +69,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (user?.role) {
         socketInstance.emit('join:role', user.role);
       }
+      if (user?.id) {
+        socketInstance.emit('join:account', user.id);
+      }
     });
 
     socketInstance.on('disconnect', () => {
@@ -81,7 +84,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       socketInstance.disconnect();
     };
-  }, [user?.role]);
+  }, [user?.role, user?.id]);
 
   return (
     <SocketContext.Provider

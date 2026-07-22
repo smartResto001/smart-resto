@@ -213,13 +213,22 @@ export const verifyAdminPassword = async (req: Request, res: Response, next: Nex
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const targetHash = user.adminPassword || user.password;
-    const isMatch = await bcrypt.compare(password, targetHash);
+    let isMatch = false;
+
+    // 1. Check custom Admin passcode if set
+    if (user.adminPassword) {
+      isMatch = await bcrypt.compare(password, user.adminPassword);
+    }
+
+    // 2. Fallback to main Account Login password
+    if (!isMatch && user.password) {
+      isMatch = await bcrypt.compare(password, user.password);
+    }
 
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: user.adminPassword ? 'Incorrect Admin Dashboard password' : 'Incorrect Account password',
+        message: 'Incorrect password. Enter your Admin passcode or Account login password.',
       });
     }
 

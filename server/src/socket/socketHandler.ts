@@ -28,6 +28,13 @@ export const initSocketIO = (httpServer: HttpServer) => {
       }
     });
 
+    socket.on('join:account', (userId: string) => {
+      if (userId) {
+        socket.join(`account:${userId}`);
+        console.log(`🏢 Socket ${socket.id} joined room: account:${userId}`);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`❌ Client disconnected: ${socket.id}`);
     });

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../services/api';
 import {
   Shield,
@@ -17,6 +17,7 @@ import {
 export const RoleSelection: React.FC = () => {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
@@ -31,8 +32,20 @@ export const RoleSelection: React.FC = () => {
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
+  useEffect(() => {
+    if (searchParams.get('unlockAdmin') === 'true' && user?.id) {
+      sessionStorage.removeItem(`admin_unlocked_${user.id}`);
+      setAdminPasswordInput('');
+      setAdminPasswordError('');
+      setIsAdminModalOpen(true);
+    }
+  }, [searchParams, user?.id]);
+
   const handleRoleSelect = (route: string) => {
-    if (route === '/admin' && user?.hasAdminPassword) {
+    if (route === '/admin') {
+      if (user?.id) {
+        sessionStorage.removeItem(`admin_unlocked_${user.id}`);
+      }
       setAdminPasswordInput('');
       setAdminPasswordError('');
       setIsAdminModalOpen(true);
@@ -47,7 +60,9 @@ export const RoleSelection: React.FC = () => {
     setIsVerifying(true);
     try {
       await API.post('/auth/admin-password/verify', { password: adminPasswordInput });
-      sessionStorage.setItem('admin_unlocked', 'true');
+      if (user?.id) {
+        sessionStorage.setItem(`admin_unlocked_${user.id}`, 'true');
+      }
       setIsAdminModalOpen(false);
       navigate('/admin');
     } catch (err: any) {
@@ -68,7 +83,9 @@ export const RoleSelection: React.FC = () => {
         newAdminPassword: newAdminPasswordInput,
       });
       updateUser(res.data.user);
-      sessionStorage.setItem('admin_unlocked', 'true');
+      if (res.data.user?.id) {
+        sessionStorage.setItem(`admin_unlocked_${res.data.user.id}`, 'true');
+      }
       setResetSuccess(res.data.message || 'Admin password updated successfully!');
       setTimeout(() => {
         setIsResetModalOpen(false);

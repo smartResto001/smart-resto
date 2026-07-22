@@ -70,7 +70,12 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center space-x-3">
           {!isRoleSelectionPage && (
             <button
-              onClick={() => navigate('/role-selection')}
+              onClick={() => {
+                if (user?.id) {
+                  sessionStorage.removeItem(`admin_unlocked_${user.id}`);
+                }
+                navigate('/role-selection');
+              }}
               className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm"
               title="Switch Role Workstation"
             >
