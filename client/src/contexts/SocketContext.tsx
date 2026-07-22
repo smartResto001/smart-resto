@@ -37,15 +37,29 @@ const playChime = () => {
   }
 };
 
+const getSocketUrl = (): string => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl.startsWith('http://') || apiUrl.startsWith('https://')) {
+      return apiUrl.replace(/\/api\/?$/, '');
+    }
+  }
+  return '/';
+};
+
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    // Socket.io client initialization
-    const socketInstance = io('/', {
-      transports: ['websocket', 'polling'],
+    // Socket.io client initialization targeting the backend host
+    const socketUrl = getSocketUrl();
+    const socketInstance = io(socketUrl, {
+      transports: ['polling', 'websocket'],
     });
 
     socketInstance.on('connect', () => {

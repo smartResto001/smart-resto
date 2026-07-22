@@ -12,18 +12,15 @@ import reportRoutes from './routes/reportRoutes';
 import userRoutes from './routes/userRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
+import { corsOptions } from './utils/corsUtils';
+
 const app = express();
 
 // Security Headers
 app.use(helmet());
 
 // CORS Config
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || '*',
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 
 // Rate Limiting
 const limiter = rateLimit({
