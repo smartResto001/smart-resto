@@ -12,6 +12,7 @@ import {
   Lock,
   X,
   KeyRound,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const RoleSelection: React.FC = () => {
@@ -33,18 +34,23 @@ export const RoleSelection: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get('unlockAdmin') === 'true' && user?.id) {
+    if (searchParams.get('unlockAdmin') === 'true' && user?.id && user.hasAdminPassword && user.role !== 'CHIEF_ADMIN') {
       sessionStorage.removeItem(`admin_unlocked_${user.id}`);
       setAdminPasswordInput('');
       setAdminPasswordError('');
       setIsAdminModalOpen(true);
     }
-  }, [searchParams, user?.id]);
+  }, [searchParams, user]);
 
   const handleRoleSelect = (route: string) => {
     if (route === '/admin') {
-      if (user?.id) {
-        sessionStorage.removeItem(`admin_unlocked_${user.id}`);
+      if (!user?.hasAdminPassword || user?.role === 'CHIEF_ADMIN') {
+        navigate('/admin');
+        return;
+      }
+      if (user?.id && sessionStorage.getItem(`admin_unlocked_${user.id}`) === 'true') {
+        navigate('/admin');
+        return;
       }
       setAdminPasswordInput('');
       setAdminPasswordError('');
@@ -122,8 +128,47 @@ export const RoleSelection: React.FC = () => {
           Logged in as <span className="text-amber-400 font-semibold">{user?.name || 'User'}</span>. You can enter any role dashboard in this account.
         </p>
 
+        {/* Chief Admin Master Control Card (Featured if Chief Admin or available) */}
+        {user?.role === 'CHIEF_ADMIN' && (
+          <div className="w-full mt-6">
+            <div
+              onClick={() => navigate('/chief-admin')}
+              className="group p-6 rounded-3xl border border-purple-500/40 hover:border-purple-400 bg-gradient-to-r from-purple-950/60 via-slate-900/80 to-indigo-950/60 backdrop-blur-xl shadow-2xl shadow-purple-950/50 hover:shadow-purple-600/30 transition-all duration-300 cursor-pointer flex flex-col md:flex-row items-center justify-between gap-6 transform hover:-translate-y-1"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="p-4 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform shrink-0">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-xl font-black text-white">Chief Admin Control Center</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500/30 text-purple-200 border border-purple-400/40 uppercase">
+                      Master Owner
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-300 font-medium mt-0.5">SaaS Platform & Multi-Hotel Management</p>
+                  <p className="text-xs text-slate-300 leading-relaxed mt-1">
+                    Manage all hotel accounts across the platform, lock/unlock access, provision new hotels, and control account removals.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/chief-admin');
+                }}
+                className="py-3 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold shadow-lg shadow-purple-600/40 flex items-center space-x-2 transition-all shrink-0"
+              >
+                <span>Enter Control Center</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 4 Role Dashboard Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-8">
 
           {/* 1. Admin Dashboard */}
           <div

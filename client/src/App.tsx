@@ -9,6 +9,8 @@ import { WaiterDashboard } from './pages/WaiterDashboard';
 import { KitchenDashboard } from './pages/KitchenDashboard';
 import { BillingDashboard } from './pages/BillingDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { ChiefAdminDashboard } from './pages/ChiefAdminDashboard';
+import { ChiefAdminLogin } from './pages/ChiefAdminLogin';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
 const queryClient = new QueryClient({
@@ -23,6 +25,7 @@ const queryClient = new QueryClient({
 const RoleBasedRedirect: React.FC = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'CHIEF_ADMIN') return <Navigate to="/chief-admin" replace />;
   return <Navigate to="/role-selection" replace />;
 };
 
@@ -33,12 +36,15 @@ export const App: React.FC = () => {
         <SocketProvider>
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
-              {/* Primary Public Route: Login & Create Account */}
+              {/* Primary Public Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/chief-admin/login" element={<ChiefAdminLogin />} />
+              <Route path="/chief-admin-login" element={<ChiefAdminLogin />} />
 
               {/* Protected Workstation Routes for Logged In Accounts */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/role-selection" element={<RoleSelection />} />
+                <Route path="/chief-admin" element={<ChiefAdminDashboard />} />
                 <Route path="/waiter" element={<WaiterDashboard />} />
                 <Route path="/kitchen" element={<KitchenDashboard />} />
                 <Route path="/billing" element={<BillingDashboard />} />

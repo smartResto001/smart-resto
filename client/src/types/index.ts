@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'WAITER' | 'KITCHEN' | 'CASHIER';
+export type Role = 'CHIEF_ADMIN' | 'ADMIN' | 'WAITER' | 'KITCHEN' | 'CASHIER';
 
 export type TableStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'CLEANING';
 
@@ -26,6 +26,7 @@ export interface User {
   email: string;
   role: Role;
   hasAdminPassword?: boolean;
+  isLocked?: boolean;
   createdAt?: string;
 }
 

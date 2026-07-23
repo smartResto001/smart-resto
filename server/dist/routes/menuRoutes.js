@@ -8,6 +8,8 @@ const router = (0, express_1.Router)();
 router.use(authMiddleware_1.authenticateJWT);
 router.get('/', menuController_1.getMenu);
 router.post('/categories', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.createCategory);
+router.put('/categories/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.updateCategory);
+router.delete('/categories/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.deleteCategory);
 router.post('/items', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.createFoodItem);
 router.put('/items/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.updateFoodItem);
 router.delete('/items/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), menuController_1.deleteFoodItem);

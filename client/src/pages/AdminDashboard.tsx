@@ -48,7 +48,7 @@ export const AdminDashboard: React.FC = () => {
   const [isSavingPass, setIsSavingPass] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && user.hasAdminPassword && user.role !== 'CHIEF_ADMIN') {
       const isUnlocked = sessionStorage.getItem(`admin_unlocked_${user.id}`) === 'true';
       if (!isUnlocked) {
         navigate('/role-selection?unlockAdmin=true', { replace: true });

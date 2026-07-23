@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Role } from '../../types';
 import { Navbar } from './Navbar';
@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -21,7 +22,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = () => {
   }
 
   if (!isAuthenticated || !user) {
+    if (location.pathname.startsWith('/chief-admin')) {
+      return <Navigate to="/chief-admin/login" replace />;
+    }
     return <Navigate to="/login" replace />;
+  }
+
+  if (location.pathname.startsWith('/chief-admin') && user.role !== 'CHIEF_ADMIN') {
+    return <Navigate to="/chief-admin/login" replace />;
   }
 
   return (

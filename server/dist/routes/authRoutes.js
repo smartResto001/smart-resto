@@ -7,5 +7,7 @@ const router = (0, express_1.Router)();
 router.post('/login', authController_1.login);
 router.post('/register', authController_1.register);
 router.get('/me', authMiddleware_1.authenticateJWT, authController_1.getMe);
-router.post('/verify-role', authMiddleware_1.authenticateJWT, authController_1.verifyRole);
+router.post('/admin-password/set', authMiddleware_1.authenticateJWT, authController_1.setAdminPassword);
+router.post('/admin-password/verify', authMiddleware_1.authenticateJWT, authController_1.verifyAdminPassword);
+router.post('/admin-password/reset', authMiddleware_1.authenticateJWT, authController_1.resetAdminPasswordWithAccountPassword);
 exports.default = router;

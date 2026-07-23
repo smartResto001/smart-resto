@@ -8,7 +8,7 @@ const createOrder = async (req, res, next) => {
     try {
         const { tableId, customerName, items, specialInstructions } = req.body;
         const waiterId = req.user?.id;
-        if (!tableId || !customerName || !items || !Array.isArray(items) || items.length === 0) {
+        if (!tableId || !items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'Missing required order fields' });
         }
         // Check table
@@ -16,11 +16,11 @@ const createOrder = async (req, res, next) => {
         if (!table) {
             return res.status(404).json({ success: false, message: 'Table not found' });
         }
-        // Generate Unique Order ID & Token Number
-        const count = await prisma_1.prisma.order.count();
+        const userId = table.userId || req.user?.id;
+        // Create brand new Order ticket in DB
+        const count = await prisma_1.prisma.order.count({ where: userId ? { userId } : {} });
         const tokenNumber = (count % 999) + 1;
         const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${tokenNumber.toString().padStart(3, '0')}`;
-        // Calculate total
         let totalAmount = 0;
         const orderItemsData = [];
         for (const item of items) {
@@ -38,14 +38,15 @@ const createOrder = async (req, res, next) => {
         }
         const taxAmount = totalAmount * 0.05; // 5% GST default
         const grandTotal = totalAmount + taxAmount;
-        // Create Order in DB
+        const finalCustomerName = (customerName && customerName.trim()) || `Guest Table ${table.tableNumber}`;
         const order = await prisma_1.prisma.order.create({
             data: {
                 orderNumber,
                 tokenNumber,
-                customerName,
+                customerName: finalCustomerName,
                 tableId,
                 waiterId,
+                userId,
                 status: types_1.OrderStatus.PENDING,
                 totalAmount,
                 taxAmount,
@@ -73,8 +74,10 @@ const createOrder = async (req, res, next) => {
         // Broadcast Real-time Socket.IO Notifications to Kitchen & Cashier!
         const io = (0, socketHandler_1.getSocketIO)();
         if (io) {
-            io.emit('order:created', order);
-            io.emit('notification:new', {
+            const targetRoom = userId ? `account:${userId}` : null;
+            const emitTo = targetRoom ? io.to(targetRoom) : io;
+            emitTo.emit('order:created', order);
+            emitTo.emit('notification:new', {
                 title: 'New Order Received',
                 message: `Order #${order.orderNumber} for Table ${table.tableNumber} (${order.customerName})`,
                 roleTarget: types_1.Role.KITCHEN,
@@ -90,7 +93,11 @@ exports.createOrder = createOrder;
 const getAllOrders = async (req, res, next) => {
     try {
         const { status, tableId } = req.query;
+        const userId = req.user?.id;
         const whereClause = {};
+        if (userId) {
+            whereClause.userId = userId;
+        }
         if (status) {
             whereClause.status = status;
         }
@@ -121,6 +128,7 @@ exports.getAllOrders = getAllOrders;
 const getOrderById = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const userId = req.user?.id;
         const order = await prisma_1.prisma.order.findUnique({
             where: { id },
             include: {
@@ -137,6 +145,9 @@ const getOrderById = async (req, res, next) => {
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
+        if (order.userId && userId && order.userId !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized access to this order' });
+        }
         return res.status(200).json({ success: true, data: order });
     }
     catch (error) {
@@ -148,8 +159,16 @@ const updateOrderStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
+        const userId = req.user?.id;
         if (!Object.values(types_1.OrderStatus).includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid order status' });
+        }
+        const existingOrder = await prisma_1.prisma.order.findUnique({ where: { id } });
+        if (!existingOrder) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (existingOrder.userId && userId && existingOrder.userId !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const updateData = { status };
         if (status === types_1.OrderStatus.READY) {
@@ -173,10 +192,12 @@ const updateOrderStatus = async (req, res, next) => {
         // Real-time socket broadcast
         const io = (0, socketHandler_1.getSocketIO)();
         if (io) {
-            io.emit('order:status_changed', order);
+            const targetRoom = order.userId ? `account:${order.userId}` : null;
+            const emitTo = targetRoom ? io.to(targetRoom) : io;
+            emitTo.emit('order:status_changed', order);
             // Targeted alerts
             if (status === types_1.OrderStatus.READY) {
-                io.emit('kitchen:food_ready', {
+                emitTo.emit('kitchen:food_ready', {
                     orderId: order.id,
                     orderNumber: order.orderNumber,
                     tableNumber: order.table.tableNumber,
@@ -194,6 +215,14 @@ exports.updateOrderStatus = updateOrderStatus;
 const cancelOrder = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const userId = req.user?.id;
+        const existingOrder = await prisma_1.prisma.order.findUnique({ where: { id } });
+        if (!existingOrder) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        if (existingOrder.userId && userId && existingOrder.userId !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
         const order = await prisma_1.prisma.order.update({
             where: { id },
             data: { status: types_1.OrderStatus.CANCELLED },
@@ -214,7 +243,9 @@ const cancelOrder = async (req, res, next) => {
         }
         const io = (0, socketHandler_1.getSocketIO)();
         if (io) {
-            io.emit('order:status_changed', order);
+            const targetRoom = order.userId ? `account:${order.userId}` : null;
+            const emitTo = targetRoom ? io.to(targetRoom) : io;
+            emitTo.emit('order:status_changed', order);
         }
         return res.status(200).json({ success: true, message: 'Order cancelled successfully', data: order });
     }

@@ -27,24 +27,11 @@ const authorizeRoles = (...roles) => {
         if (!req.user) {
             return res.status(401).json({ success: false, message: 'Unauthenticated user' });
         }
-        const currentRoleHeader = req.headers['x-current-role']?.toUpperCase();
-        const userRoles = req.user.roles || [];
-        if (currentRoleHeader) {
-            if (!userRoles.includes(currentRoleHeader) || !roles.includes(currentRoleHeader)) {
-                return res.status(403).json({
-                    success: false,
-                    message: `Access denied. Role '${currentRoleHeader}' is not authorized for this resource.`,
-                });
-            }
-        }
-        else {
-            const hasPermission = roles.some((role) => userRoles.includes(role));
-            if (!hasPermission) {
-                return res.status(403).json({
-                    success: false,
-                    message: `Access denied. Authorized roles required: ${roles.join(', ')}`,
-                });
-            }
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: `Access denied. Role '${req.user.role}' is not authorized for this resource. Required: ${roles.join(', ')}`,
+            });
         }
         next();
     };

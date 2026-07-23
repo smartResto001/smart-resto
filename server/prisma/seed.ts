@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 export const Role = {
+  CHIEF_ADMIN: 'CHIEF_ADMIN',
   ADMIN: 'ADMIN',
   WAITER: 'WAITER',
   KITCHEN: 'KITCHEN',
@@ -26,13 +27,31 @@ async function main() {
   await prisma.order.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.foodItem.deleteMany();
-  await prisma.category.deleteMany();
   await prisma.table.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.chiefAdmin.deleteMany();
   await prisma.notification.deleteMany();
 
-  // 2. Create Default Staff Users
+  // 2. Create Default Staff Users & Chief Admins
   const hashedPassword = await bcrypt.hash('password123', 10);
+  const chiefAdminHashedPassword = await bcrypt.hash('admin@2004', 10);
+
+  // Chief Admins in dedicated "ChiefAdmin" table
+  const chiefAdmin = await prisma.chiefAdmin.create({
+    data: {
+      name: 'Chief Admin (Platform Owner)',
+      email: 'admin2004@gmail.com',
+      password: chiefAdminHashedPassword,
+    },
+  });
+
+  const legacyChiefAdmin = await prisma.chiefAdmin.create({
+    data: {
+      name: 'Chief Admin Demo',
+      email: 'chiefadmin@gmail.com',
+      password: hashedPassword,
+    },
+  });
 
   const admin = await prisma.user.create({
     data: {

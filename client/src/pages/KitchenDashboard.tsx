@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import API from '../services/api';
 import { useSocket } from '../contexts/SocketContext';
 import { Order } from '../types';
-import { ChefHat, Clock, Flame, CheckCircle, AlertCircle, Sparkles, Filter } from 'lucide-react';
+import { ChefHat, Clock, Flame, CheckCircle, AlertCircle, Sparkles, Filter, Maximize2, X } from 'lucide-react';
 
 export const KitchenDashboard: React.FC = () => {
   const { socket, playNotificationSound } = useSocket();
@@ -10,6 +10,14 @@ export const KitchenDashboard: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [nowTime, setNowTime] = useState<number>(Date.now());
+
+  // Image Maximizer Lightbox State
+  const [maximizedImage, setMaximizedImage] = useState<{
+    url: string;
+    name: string;
+    notes?: string | null;
+    isVeg?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -120,7 +128,7 @@ export const KitchenDashboard: React.FC = () => {
           <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <ChefHat className="w-6 h-6 text-amber-400" /> Kitchen KDS Display
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Live incoming order tickets & cooking timers</p>
+          <p className="text-xs text-slate-400 mt-0.5">Live incoming order tickets & cooking timers (Click dish image to enlarge)</p>
         </div>
 
         {/* Filter Buttons */}
@@ -198,21 +206,51 @@ export const KitchenDashboard: React.FC = () => {
                     {order.items?.map((item, idx) => (
                       <div
                         key={idx}
-                        className="p-2.5 bg-slate-800/60 border border-slate-700/40 rounded-xl flex items-center justify-between"
+                        className="p-2.5 bg-slate-800/80 border border-slate-700/60 rounded-2xl flex items-center justify-between gap-3 shadow-md"
                       >
-                        <div className="flex items-center space-x-3">
-                          <span className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-sm flex items-center justify-center shadow">
-                            {item.quantity}
-                          </span>
-                          <div>
-                            <div className="text-sm font-bold text-slate-100">{item.foodItem?.name}</div>
-                            {item.notes && <div className="text-[10px] text-slate-400">"{item.notes}"</div>}
+                        <div className="flex items-center space-x-3 overflow-hidden">
+                          {item.foodItem?.image ? (
+                            <div
+                              onClick={() =>
+                                setMaximizedImage({
+                                  url: item.foodItem!.image!,
+                                  name: item.foodItem?.name || 'Food Item',
+                                  notes: item.notes,
+                                  isVeg: item.foodItem?.isVeg,
+                                })
+                              }
+                              className="relative group/img cursor-pointer shrink-0"
+                              title="Click to Maximize Image"
+                            >
+                              <img
+                                src={item.foodItem.image}
+                                alt={item.foodItem?.name || 'Food item'}
+                                className="w-12 h-12 object-cover rounded-xl border border-slate-700/80 shadow-sm group-hover/img:brightness-110 transition-all"
+                              />
+                              <div className="absolute inset-0 bg-slate-950/40 rounded-xl opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                                <Maximize2 className="w-4 h-4 text-white drop-shadow" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-center text-slate-500 shrink-0">
+                              <ChefHat className="w-6 h-6 text-amber-500/70" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs shrink-0">
+                                {item.quantity}x
+                              </span>
+                              <span className="text-xs font-bold text-slate-100 truncate">{item.foodItem?.name}</span>
+                            </div>
+                            {item.notes && <div className="text-[10px] text-slate-400 mt-0.5 italic truncate">"{item.notes}"</div>}
                           </div>
                         </div>
 
                         <span
-                          className={`w-2.5 h-2.5 rounded-full ${item.foodItem?.isVeg ? 'bg-emerald-500' : 'bg-rose-500'
-                            }`}
+                          className={`w-3 h-3 rounded-full shrink-0 ${
+                            item.foodItem?.isVeg ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-rose-500 shadow-rose-500/50'
+                          }`}
                           title={item.foodItem?.isVeg ? 'Veg' : 'Non-Veg'}
                         />
                       </div>
@@ -255,6 +293,60 @@ export const KitchenDashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Image Maximizer Lightbox Modal */}
+      {maximizedImage && (
+        <div
+          onClick={() => setMaximizedImage(null)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative overflow-hidden"
+          >
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-3">
+                <span
+                  className={`w-3.5 h-3.5 rounded-full ${
+                    maximizedImage.isVeg ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-rose-500 shadow-rose-500/50'
+                  }`}
+                />
+                <h3 className="font-extrabold text-slate-100 text-lg">{maximizedImage.name}</h3>
+              </div>
+              <button
+                onClick={() => setMaximizedImage(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center min-h-[250px] max-h-[60vh] p-2">
+              <img
+                src={maximizedImage.url}
+                alt={maximizedImage.name}
+                className="w-full h-full max-h-[60vh] object-contain rounded-xl shadow-lg"
+              />
+            </div>
+
+            {maximizedImage.notes && (
+              <div className="p-3 bg-amber-950/40 border border-amber-800/40 rounded-xl text-amber-300 text-xs font-semibold">
+                Special Item Notes: "{maximizedImage.notes}"
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setMaximizedImage(null)}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md"
+              >
+                Close Full Image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+

@@ -39,10 +39,24 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('resto_token');
-      localStorage.removeItem('resto_user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      const requestUrl = error.config?.url || '';
+      const isLoginRequest =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/chief-admin/login');
+
+      // Only redirect on session expiration for non-login requests
+      if (!isLoginRequest) {
+        localStorage.removeItem('resto_token');
+        localStorage.removeItem('resto_user');
+
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/chief-admin')) {
+          if (currentPath !== '/chief-admin/login' && currentPath !== '/chief-admin-login') {
+            window.location.href = '/chief-admin/login';
+          }
+        } else if (currentPath !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

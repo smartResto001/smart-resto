@@ -2,11 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentMethod = exports.OrderStatus = exports.TableStatus = exports.Role = void 0;
 exports.Role = {
+    CHIEF_ADMIN: 'CHIEF_ADMIN',
     ADMIN: 'ADMIN',
     WAITER: 'WAITER',
     KITCHEN: 'KITCHEN',
-    BILLING: 'BILLING',
-    USER: 'USER',
+    CASHIER: 'CASHIER',
 };
 exports.TableStatus = {
     AVAILABLE: 'AVAILABLE',

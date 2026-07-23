@@ -14,17 +14,27 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Query strictly from User table in database
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: cleanEmail },
     });
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials for User Account' });
+    }
+
+    if (user.isLocked) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account has been locked/suspended by Chief Admin. Please contact support.',
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials for User Account' });
     }
 
     const token = jwt.sign(
@@ -40,14 +50,75 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     return res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: 'User Login successful',
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        isLocked: user.isLocked,
         hasAdminPassword: !!user.adminPassword,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const chiefAdminLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Query strictly from ChiefAdmin table in database
+    const chiefAdmin = await prisma.chiefAdmin.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (!chiefAdmin) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials for Chief Admin Account' });
+    }
+
+    if (chiefAdmin.isLocked) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chief Admin Account has been locked/suspended.',
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, chiefAdmin.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials for Chief Admin Account' });
+    }
+
+    const token = jwt.sign(
+      {
+        id: chiefAdmin.id,
+        name: chiefAdmin.name,
+        email: chiefAdmin.email,
+        role: 'CHIEF_ADMIN',
+      },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Chief Admin Login successful',
+      token,
+      user: {
+        id: chiefAdmin.id,
+        name: chiefAdmin.name,
+        email: chiefAdmin.email,
+        role: 'CHIEF_ADMIN',
+        isLocked: chiefAdmin.isLocked,
+        hasAdminPassword: false,
       },
     });
   } catch (error) {
@@ -61,6 +132,31 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
 
+    if (req.user.role === 'CHIEF_ADMIN') {
+      const chiefAdmin = await prisma.chiefAdmin.findUnique({
+        where: { id: req.user.id },
+      });
+
+      if (chiefAdmin) {
+        if (chiefAdmin.isLocked) {
+          return res.status(403).json({ success: false, message: 'Chief Admin account is locked' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          user: {
+            id: chiefAdmin.id,
+            name: chiefAdmin.name,
+            email: chiefAdmin.email,
+            role: 'CHIEF_ADMIN',
+            isLocked: chiefAdmin.isLocked,
+            hasAdminPassword: false,
+            createdAt: chiefAdmin.createdAt,
+          },
+        });
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {
@@ -68,26 +164,56 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
         name: true,
         email: true,
         role: true,
+        isLocked: true,
         adminPassword: true,
         createdAt: true,
       },
     });
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if (user) {
+      if (user.isLocked) {
+        return res.status(403).json({ success: false, message: 'Account locked by Chief Admin' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isLocked: user.isLocked,
+          hasAdminPassword: !!user.adminPassword,
+          createdAt: user.createdAt,
+        },
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        hasAdminPassword: !!user.adminPassword,
-        createdAt: user.createdAt,
-      },
+    // Fallback: Check ChiefAdmin if role was not explicitly CHIEF_ADMIN in payload
+    const fallbackChiefAdmin = await prisma.chiefAdmin.findUnique({
+      where: { id: req.user.id },
     });
+
+    if (fallbackChiefAdmin) {
+      if (fallbackChiefAdmin.isLocked) {
+        return res.status(403).json({ success: false, message: 'Chief Admin account is locked' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: fallbackChiefAdmin.id,
+          name: fallbackChiefAdmin.name,
+          email: fallbackChiefAdmin.email,
+          role: 'CHIEF_ADMIN',
+          isLocked: fallbackChiefAdmin.isLocked,
+          hasAdminPassword: false,
+          createdAt: fallbackChiefAdmin.createdAt,
+        },
+      });
+    }
+
+    return res.status(404).json({ success: false, message: 'User account not found' });
   } catch (error) {
     next(error);
   }

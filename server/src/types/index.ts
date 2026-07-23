@@ -1,5 +1,6 @@
-export type Role = 'ADMIN' | 'WAITER' | 'KITCHEN' | 'CASHIER';
+export type Role = 'CHIEF_ADMIN' | 'ADMIN' | 'WAITER' | 'KITCHEN' | 'CASHIER';
 export const Role = {
+  CHIEF_ADMIN: 'CHIEF_ADMIN',
   ADMIN: 'ADMIN',
   WAITER: 'WAITER',
   KITCHEN: 'KITCHEN',

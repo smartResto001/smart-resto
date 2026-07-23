@@ -4,13 +4,30 @@ exports.getDashboardStats = void 0;
 const prisma_1 = require("../config/prisma");
 const getDashboardStats = async (req, res, next) => {
     try {
-        const totalOrders = await prisma_1.prisma.order.count();
-        const totalCompletedOrders = await prisma_1.prisma.order.count({ where: { status: 'PAID' } });
-        const totalCancelledOrders = await prisma_1.prisma.order.count({ where: { status: 'CANCELLED' } });
+        const userId = req.user?.id;
+        const totalOrders = await prisma_1.prisma.order.count({
+            where: userId ? { userId } : {},
+        });
+        const totalCompletedOrders = await prisma_1.prisma.order.count({
+            where: {
+                status: 'PAID',
+                ...(userId ? { userId } : {}),
+            },
+        });
+        const totalCancelledOrders = await prisma_1.prisma.order.count({
+            where: {
+                status: 'CANCELLED',
+                ...(userId ? { userId } : {}),
+            },
+        });
         const activeOrdersCount = await prisma_1.prisma.order.count({
-            where: { status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED'] } },
+            where: {
+                status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'SERVED'] },
+                ...(userId ? { userId } : {}),
+            },
         });
         const totalRevenueAgg = await prisma_1.prisma.payment.aggregate({
+            where: userId ? { userId } : {},
             _sum: { grandTotal: true },
         });
         const totalRevenue = totalRevenueAgg._sum.grandTotal || 0;
@@ -18,6 +35,7 @@ const getDashboardStats = async (req, res, next) => {
         // Top selling foods
         const topFoodsRaw = await prisma_1.prisma.orderItem.groupBy({
             by: ['foodItemId'],
+            where: userId ? { order: { userId } } : {},
             _sum: { quantity: true },
             orderBy: { _sum: { quantity: 'desc' } },
             take: 5,
@@ -37,6 +55,7 @@ const getDashboardStats = async (req, res, next) => {
         }));
         // Recent 10 payments
         const recentPayments = await prisma_1.prisma.payment.findMany({
+            where: userId ? { userId } : {},
             include: {
                 order: {
                     include: { table: true },

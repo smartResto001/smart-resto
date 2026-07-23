@@ -7,27 +7,20 @@ exports.deleteUser = exports.createUser = exports.getAllUsers = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma_1 = require("../config/prisma");
 const types_1 = require("../types");
+const emailService_1 = require("../services/emailService");
 const getAllUsers = async (req, res, next) => {
     try {
         const users = await prisma_1.prisma.user.findMany({
-            include: {
-                userRoles: {
-                    include: {
-                        role: true,
-                    },
-                },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                createdAt: true,
             },
             orderBy: { createdAt: 'desc' },
         });
-        const formattedUsers = users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            phone: u.phone,
-            roles: u.userRoles.map((ur) => ur.role.name),
-            createdAt: u.createdAt,
-        }));
-        return res.status(200).json({ success: true, data: formattedUsers });
+        return res.status(200).json({ success: true, data: users });
     }
     catch (error) {
         next(error);
@@ -36,49 +29,42 @@ const getAllUsers = async (req, res, next) => {
 exports.getAllUsers = getAllUsers;
 const createUser = async (req, res, next) => {
     try {
-        const { name, email, password, role, phone } = req.body;
+        const { name, email, password, role } = req.body;
         if (!name || !email || !password || !role) {
-            return res.status(400).json({ success: false, message: 'All required fields must be provided' });
+            return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+        if (!(0, emailService_1.isGmailAccount)(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "This mail doesn't exist as a valid Gmail account (@gmail.com). Only existing Google Mail accounts can be used to create an account.",
+            });
         }
         if (!Object.values(types_1.Role).includes(role)) {
             return res.status(400).json({ success: false, message: 'Invalid role' });
         }
-        const existing = await prisma_1.prisma.user.findUnique({ where: { email } });
+        const existing = await prisma_1.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
         if (existing) {
             return res.status(400).json({ success: false, message: 'User with this email already exists' });
-        }
-        let targetRole = await prisma_1.prisma.role.findUnique({ where: { name: role } });
-        if (!targetRole) {
-            targetRole = await prisma_1.prisma.role.create({ data: { name: role } });
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const user = await prisma_1.prisma.user.create({
             data: {
                 name,
-                email,
+                email: email.trim().toLowerCase(),
                 password: hashedPassword,
-                phone,
-                userRoles: {
-                    create: [{ roleId: targetRole.id }],
-                },
+                role: role,
             },
-            include: {
-                userRoles: {
-                    include: {
-                        role: true,
-                    },
-                },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                createdAt: true,
             },
         });
-        const formattedUser = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            roles: user.userRoles.map((ur) => ur.role.name),
-            createdAt: user.createdAt,
-        };
-        return res.status(201).json({ success: true, data: formattedUser });
+        // Send welcome email notification asynchronously
+        (0, emailService_1.sendWelcomeEmail)(user.email, user.name, user.role);
+        return res.status(201).json({ success: true, data: user });
     }
     catch (error) {
         next(error);

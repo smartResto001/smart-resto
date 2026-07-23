@@ -403,13 +403,26 @@ export const WaiterDashboard: React.FC = () => {
                   </div>
 
                   {/* Food items summary */}
-                  <div className="space-y-1.5 border-t border-slate-800 pt-3">
+                  <div className="space-y-2 border-t border-slate-800 pt-3">
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-xs text-slate-300">
-                        <span>
-                          {item.quantity}x {item.foodItem?.name}
-                        </span>
-                        <span className="text-slate-400">₹{item.unitPrice * item.quantity}</span>
+                      <div key={idx} className="flex items-center justify-between text-xs text-slate-300 gap-2">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          {item.foodItem?.image ? (
+                            <img
+                              src={item.foodItem.image}
+                              alt={item.foodItem?.name || 'Food item'}
+                              className="w-7 h-7 object-cover rounded-lg shrink-0 border border-slate-800"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                              <Utensils className="w-3.5 h-3.5 text-amber-500/70" />
+                            </div>
+                          )}
+                          <span className="truncate">
+                            <strong className="text-amber-400">{item.quantity}x</strong> {item.foodItem?.name}
+                          </span>
+                        </div>
+                        <span className="text-slate-400 font-semibold shrink-0">₹{item.unitPrice * item.quantity}</span>
                       </div>
                     ))}
                   </div>
@@ -577,21 +590,34 @@ export const WaiterDashboard: React.FC = () => {
                       cart.map((c) => (
                         <div
                           key={c.foodItem.id}
-                          className="flex items-center justify-between p-2 bg-slate-900 rounded-xl border border-slate-800 text-xs"
+                          className="flex items-center justify-between p-2 bg-slate-900 rounded-xl border border-slate-800 text-xs gap-2"
                         >
-                          <div className="truncate max-w-[130px]">
-                            <div className="font-bold text-slate-200 truncate">{c.foodItem.name}</div>
-                            <div className="text-[10px] text-amber-400">₹{c.foodItem.price * c.quantity}</div>
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            {c.foodItem.image ? (
+                              <img
+                                src={c.foodItem.image}
+                                alt={c.foodItem.name}
+                                className="w-9 h-9 object-cover rounded-lg shrink-0 border border-slate-800"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                <Utensils className="w-4 h-4 text-amber-500/70" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-200 truncate">{c.foodItem.name}</div>
+                              <div className="text-[10px] text-amber-400 font-semibold">₹{c.foodItem.price * c.quantity}</div>
+                            </div>
                           </div>
 
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1.5 shrink-0">
                             <button
                               onClick={() => updateCartQuantity(c.foodItem.id, -1)}
                               className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold"
                             >
                               -
                             </button>
-                            <span className="font-bold text-slate-100">{c.quantity}</span>
+                            <span className="font-bold text-slate-100 text-xs px-1">{c.quantity}</span>
                             <button
                               onClick={() => updateCartQuantity(c.foodItem.id, 1)}
                               className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold"

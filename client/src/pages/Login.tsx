@@ -8,11 +8,12 @@ import {
   Mail,
   User as UserIcon,
   ArrowRight,
-  Database,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -25,10 +26,14 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/role-selection', { replace: true });
+    if (isAuthenticated && user) {
+      if (user.role === 'CHIEF_ADMIN') {
+        navigate('/chief-admin', { replace: true });
+      } else {
+        navigate('/role-selection', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -52,12 +57,15 @@ export const Login: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // Registers account as ADMIN in the database
-        await register(name, email, password, 'ADMIN');
+        const registeredUser = await register(name, email, password, 'ADMIN');
         navigate('/role-selection');
       } else {
-        await login(email, password);
-        navigate('/role-selection');
+        const loggedInUser = await login(email, password);
+        if (loggedInUser.role === 'CHIEF_ADMIN') {
+          navigate('/chief-admin');
+        } else {
+          navigate('/role-selection');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || `${isSignUp ? 'Registration' : 'Login'} failed. Please check details.`);
@@ -66,11 +74,28 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleQuickChiefAdminLogin = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const loggedInUser = await login('chiefadmin@gmail.com', 'password123');
+      if (loggedInUser.role === 'CHIEF_ADMIN') {
+        navigate('/chief-admin');
+      } else {
+        navigate('/role-selection');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Chief Admin login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden font-sans">
       {/* Background Ambient Lights */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10 my-4">
 
@@ -93,9 +118,8 @@ export const Login: React.FC = () => {
               setIsSignUp(false);
               setError('');
             }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
-              !isSignUp ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${!isSignUp ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Sign In
           </button>
@@ -105,9 +129,8 @@ export const Login: React.FC = () => {
               setIsSignUp(true);
               setError('');
             }}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
-              isSignUp ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${isSignUp ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Create Account
           </button>
@@ -184,13 +207,12 @@ export const Login: React.FC = () => {
                   ? 'Creating Account...'
                   : 'Signing In...'
                 : isSignUp
-                ? 'Create Account'
-                : 'Sign In'}
+                  ? 'Create Account'
+                  : 'Sign In'}
             </span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
       </div>
     </div>
   );
