@@ -149,7 +149,7 @@ export const KitchenDashboard: React.FC = () => {
       </div>
 
       {/* Live Order Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {filteredOrders.length === 0 ? (
           <div className="col-span-full py-20 text-center space-y-3 bg-slate-900/40 rounded-3xl border border-slate-800">
             <ChefHat className="w-12 h-12 text-slate-600 mx-auto" />

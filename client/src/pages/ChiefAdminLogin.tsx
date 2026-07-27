@@ -56,7 +56,7 @@ export const ChiefAdminLogin: React.FC = () => {
       <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-2xl border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-950/40 relative z-10 my-4">
+      <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-2xl border border-purple-500/30 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-purple-950/40 relative z-10 my-4">
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 shadow-xl shadow-purple-500/30 text-white mb-3">

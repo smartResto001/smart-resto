@@ -120,9 +120,9 @@ export const WaiterDashboard: React.FC = () => {
     setCart((prev) => {
       const existingIndex = prev.findIndex((c) => c.foodItem.id === item.id);
       if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex].quantity += 1;
-        return updated;
+        return prev.map((c, index) =>
+          index === existingIndex ? { ...c, quantity: c.quantity + 1 } : c
+        );
       }
       return [...prev, { foodItem: item, quantity: 1 }];
     });
@@ -138,7 +138,7 @@ export const WaiterDashboard: React.FC = () => {
           }
           return c;
         })
-        .filter(Boolean) as any
+        .filter(Boolean) as { foodItem: FoodItem; quantity: number; notes?: string }[]
     );
   };
 
@@ -490,11 +490,11 @@ export const WaiterDashboard: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <div className="flex gap-2 overflow-x-auto pb-2 touch-scroll">
                     <button
                       onClick={() => setSelectedCategory('ALL')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === 'ALL'
-                        ? 'bg-amber-500 text-slate-950'
+                      className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all min-h-[44px] ${selectedCategory === 'ALL'
+                        ? 'bg-amber-500 text-slate-950 shadow-md'
                         : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                         }`}
                     >
@@ -504,8 +504,8 @@ export const WaiterDashboard: React.FC = () => {
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat.id
-                          ? 'bg-amber-500 text-slate-950'
+                        className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all min-h-[44px] ${selectedCategory === cat.id
+                          ? 'bg-amber-500 text-slate-950 shadow-md'
                           : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                           }`}
                       >
@@ -516,7 +516,7 @@ export const WaiterDashboard: React.FC = () => {
                 </div>
 
                 {/* Items List Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[450px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[450px] overflow-y-auto touch-scroll pr-1">
                   {filteredFoodItems.map((item) => (
                     <div
                       key={item.id}
@@ -542,13 +542,35 @@ export const WaiterDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => addToCart(item)}
-                        className="w-full py-1.5 bg-slate-700 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add</span>
-                      </button>
+                      {cart.some((c) => c.foodItem.id === item.id) ? (
+                        <div className="w-full flex items-center justify-between bg-amber-500/20 border border-amber-500/40 rounded-xl p-1">
+                          <button
+                            type="button"
+                            onClick={() => updateCartQuantity(item.id, -1)}
+                            className="w-8 h-8 bg-amber-500 text-slate-950 rounded-lg flex items-center justify-center font-bold text-sm hover:bg-amber-400 cursor-pointer shrink-0"
+                          >
+                            -
+                          </button>
+                          <span className="font-extrabold text-amber-400 text-xs px-2">
+                            {cart.find((c) => c.foodItem.id === item.id)?.quantity} in cart
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(item)}
+                            className="w-8 h-8 bg-amber-500 text-slate-950 rounded-lg flex items-center justify-center font-bold text-sm hover:bg-amber-400 cursor-pointer shrink-0"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(item)}
+                          className="w-full py-2 bg-slate-700 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1 min-h-[44px] cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Item</span>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -560,10 +582,10 @@ export const WaiterDashboard: React.FC = () => {
                   <h4 className="font-bold text-slate-200 text-sm border-b border-slate-800 pb-2">Order Information</h4>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Customer Name *</label>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Customer Name (Optional)</label>
                     <input
                       type="text"
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. John Doe (or leave blank)"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
@@ -579,6 +601,21 @@ export const WaiterDashboard: React.FC = () => {
                       onChange={(e) => setSpecialInstructions(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
                     />
+                    {/* Quick Preset Instruction Chips */}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {['Less Spicy', 'Extra Spicy', 'No Onion/Garlic', 'Pack Takeaway', 'Serve Hot'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => {
+                            setSpecialInstructions((prev) => (prev ? `${prev}, ${preset}` : preset));
+                          }}
+                          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-[10px] font-semibold text-slate-300 hover:text-amber-400 rounded-lg border border-slate-700 transition-all cursor-pointer"
+                        >
+                          + {preset}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Cart Items */}
@@ -640,8 +677,8 @@ export const WaiterDashboard: React.FC = () => {
 
                   <button
                     onClick={handleSendOrder}
-                    disabled={isSubmitting || cart.length === 0 || !customerName.trim()}
-                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+                    disabled={isSubmitting || cart.length === 0}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl text-sm shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                     <span>{isSubmitting ? 'SENDING ORDER...' : 'SEND ORDER TO KITCHEN'}</span>

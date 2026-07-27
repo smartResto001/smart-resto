@@ -420,7 +420,7 @@ export const BillingDashboard: React.FC = () => {
       {/* PRINTABLE RECEIPT MODAL */}
       {showPrintModal && receiptData && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-6 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto touch-scroll">
 
             {/* Printable Receipt Content */}
             <div id="thermal-receipt" className="bg-white text-slate-900 p-6 rounded-2xl font-mono text-xs space-y-4 shadow-inner">

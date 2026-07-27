@@ -3,8 +3,38 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  /* Minimum 44x44px touch targets for mobile accessibility */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Safe Area paddings for mobile screens with notches & bottom home bars */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 16px);
+  }
+
+  /* Momentum smooth scrolling on mobile webkit */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -22,6 +52,13 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+/* Responsive Horizontal Table Container */
+.responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Thermal Printer CSS @media print styling */

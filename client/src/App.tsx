@@ -12,6 +12,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { ChiefAdminDashboard } from './pages/ChiefAdminDashboard';
 import { ChiefAdminLogin } from './pages/ChiefAdminLogin';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { PWAInstallPrompt } from './components/layout/PWAInstallPrompt';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,7 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SocketProvider>
+          <PWAInstallPrompt />
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               {/* Primary Public Routes */}

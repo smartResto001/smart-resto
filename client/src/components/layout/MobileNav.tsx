@@ -62,7 +62,7 @@ export const MobileNav: React.FC = () => {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-2xl border-t border-slate-800/90 px-2 py-2 shadow-2xl safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-2xl border-t border-slate-800/90 px-1 py-1.5 shadow-2xl pb-safe">
       <div className="flex justify-around items-center max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
@@ -72,7 +72,7 @@ export const MobileNav: React.FC = () => {
             <button
               key={item.path}
               onClick={() => handleNavClick(item.path)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 min-h-[44px] min-w-[44px] ${
                 isActive
                   ? `${item.activeBg} border font-bold scale-105 shadow-lg`
                   : 'text-slate-400 hover:text-slate-200 font-medium'

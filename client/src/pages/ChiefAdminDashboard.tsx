@@ -420,7 +420,7 @@ export const ChiefAdminDashboard: React.FC = () => {
       {/* CREATE HOTEL ACCOUNT MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto touch-scroll">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-purple-500/20 text-purple-400 rounded-xl">

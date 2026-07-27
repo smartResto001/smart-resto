@@ -6,6 +6,15 @@ import './index.css';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1047648356872-dummyclientid.apps.googleusercontent.com';
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (reg) => console.log('⚡ SmartResto PWA Mobile App registered:', reg.scope),
+      (err) => console.log('PWA Service Worker note:', err)
+    );
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={googleClientId}>

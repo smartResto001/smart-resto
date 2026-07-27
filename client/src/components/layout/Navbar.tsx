@@ -81,7 +81,7 @@ export const Navbar: React.FC = () => {
                 }
                 navigate('/role-selection');
               }}
-              className="flex items-center space-x-1 px-2 sm:px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm shrink-0"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm shrink-0 min-h-[44px] min-w-[44px] cursor-pointer"
               title="Switch Role Workstation"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -90,7 +90,7 @@ export const Navbar: React.FC = () => {
           )}
 
           {/* User Profile Info (Visible on Mobile & Desktop) */}
-          <div className="text-right flex flex-col justify-center min-w-0 max-w-[130px] xs:max-w-[160px] sm:max-w-[220px]">
+          <div className="text-right flex flex-col justify-center min-w-0 max-w-[110px] xs:max-w-[150px] sm:max-w-[220px]">
             <p className="text-[11px] sm:text-xs font-bold text-slate-100 leading-tight truncate">
               {user?.name || 'Staff User'}
             </p>
@@ -101,7 +101,7 @@ export const Navbar: React.FC = () => {
 
           <button
             onClick={logout}
-            className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-slate-700/60 transition-all duration-200 shrink-0"
+            className="p-2.5 rounded-xl bg-slate-800/80 text-slate-400 hover:text-rose-400 hover:bg-slate-800 active:bg-slate-700 border border-slate-700/60 transition-all duration-200 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             title="Logout"
           >
             <LogOut className="w-4 h-4" />
