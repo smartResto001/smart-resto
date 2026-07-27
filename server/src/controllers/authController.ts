@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../config/prisma';
 import { isGmailAccount, sendWelcomeEmail } from '../services/emailService';
 
@@ -29,6 +30,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(403).json({
         success: false,
         message: 'Account has been locked/suspended by Chief Admin. Please contact support.',
+      });
+    }
+
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account was created using Google Sign-In. Please sign in with Google.',
       });
     }
 
@@ -431,6 +439,237 @@ export const resetAdminPasswordWithAccountPassword = async (req: Request, res: R
         email: updatedUser.email,
         role: updatedUser.role,
         hasAdminPassword: !!updatedUser.adminPassword,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email and new password are required' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address' });
+    }
+
+    if (user.isLocked) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is locked/suspended. Please contact support.',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(String(newPassword).trim(), 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successfully! You can now sign in with your new password.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const googleClient = new OAuth2Client();
+
+export const googleAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { credential, isRegistering, name: providedName, email: providedEmail, googleId: providedGoogleId, avatar: providedAvatar } = req.body;
+
+    let email = providedEmail;
+    let name = providedName;
+    let googleId = providedGoogleId;
+    let avatar = providedAvatar;
+
+    if (credential) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        if (payload) {
+          email = payload.email;
+          name = payload.name;
+          googleId = payload.sub;
+          avatar = payload.picture;
+        }
+      } catch (verifyErr) {
+        try {
+          const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+          if (response.ok) {
+            const data: any = await response.json();
+            if (data && data.email) {
+              email = data.email;
+              name = data.name || data.given_name || name;
+              googleId = data.sub || googleId;
+              avatar = data.picture || avatar;
+            }
+          }
+        } catch (fetchErr) {
+          try {
+            const parts = credential.split('.');
+            if (parts.length === 3) {
+              const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+              if (decoded && decoded.email) {
+                email = decoded.email;
+                name = decoded.name || name;
+                googleId = decoded.sub || googleId;
+                avatar = decoded.picture || avatar;
+              }
+            }
+          } catch (decodeErr) {
+            console.error('Failed to parse Google credential token:', decodeErr);
+          }
+        }
+      }
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google authentication failed: Email address could not be verified from Google account.',
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user exists in User table
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: cleanEmail },
+          ...(googleId ? [{ googleId }] : []),
+        ],
+      },
+    });
+
+    // IF USER EXISTS:
+    if (user) {
+      if (user.isLocked) {
+        return res.status(403).json({
+          success: false,
+          message: 'Account has been locked/suspended by Chief Admin. Please contact support.',
+        });
+      }
+
+      // Update provider, googleId, avatar if missing
+      if (!user.googleId || !user.avatar || user.provider !== 'GOOGLE') {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleId: googleId || user.googleId,
+            provider: 'GOOGLE',
+            avatar: avatar || user.avatar,
+          },
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        exists: true,
+        message: 'User login successful with Google Account',
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          googleId: user.googleId,
+          provider: user.provider,
+          avatar: user.avatar,
+          isLocked: user.isLocked,
+          hasAdminPassword: !!user.adminPassword,
+        },
+      });
+    }
+
+    // IF USER DOES NOT EXIST:
+    // If not registering yet (e.g. clicked "Continue with Google" on Login page), do NOT create user automatically.
+    // Return verified Google details so frontend can redirect to prefilled Register page.
+    if (!isRegistering && !providedName) {
+      return res.status(200).json({
+        success: true,
+        exists: false,
+        message: 'Account does not exist. Redirecting to complete registration.',
+        email: cleanEmail,
+        googleId,
+        name,
+        avatar,
+      });
+    }
+
+    // Create User when registering
+    const finalName = providedName || name || cleanEmail.split('@')[0];
+
+    user = await prisma.user.create({
+      data: {
+        name: finalName,
+        email: cleanEmail,
+        googleId: googleId || null,
+        provider: 'GOOGLE',
+        avatar: avatar || null,
+        password: null,
+        role: 'WAITER',
+      },
+    });
+
+    sendWelcomeEmail(user.email, user.name, user.role || 'WAITER');
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      exists: true,
+      message: 'Account created successfully with Google',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        googleId: user.googleId,
+        provider: user.provider,
+        avatar: user.avatar,
+        isLocked: user.isLocked,
+        hasAdminPassword: !!user.adminPassword,
       },
     });
   } catch (error) {

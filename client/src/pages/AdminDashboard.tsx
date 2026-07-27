@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Category, FoodItem, Table, DashboardStats } from '../types';
-import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon } from 'lucide-react';
+import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -43,6 +43,8 @@ export const AdminDashboard: React.FC = () => {
   const [isAdminPassModalOpen, setIsAdminPassModalOpen] = useState(false);
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [confirmAdminPassword, setConfirmAdminPassword] = useState('');
+  const [showNewAdminPass, setShowNewAdminPass] = useState(false);
+  const [showConfirmAdminPass, setShowConfirmAdminPass] = useState(false);
   const [adminPassError, setAdminPassError] = useState('');
   const [adminPassSuccess, setAdminPassSuccess] = useState('');
   const [isSavingPass, setIsSavingPass] = useState(false);
@@ -784,12 +786,20 @@ export const AdminDashboard: React.FC = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                   <input
-                    type="password"
+                    type={showNewAdminPass ? 'text' : 'password'}
                     placeholder="Enter new password (or leave empty to remove)"
                     value={newAdminPassword}
                     onChange={(e) => setNewAdminPassword(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                    className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAdminPass(!showNewAdminPass)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    title={showNewAdminPass ? "Hide password" : "Show password"}
+                  >
+                    {showNewAdminPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
@@ -799,12 +809,20 @@ export const AdminDashboard: React.FC = () => {
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                     <input
-                      type="password"
+                      type={showConfirmAdminPass ? 'text' : 'password'}
                       placeholder="Confirm new password"
                       value={confirmAdminPassword}
                       onChange={(e) => setConfirmAdminPassword(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                      className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmAdminPass(!showConfirmAdminPass)}
+                      className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                      title={showConfirmAdminPass ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmAdminPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
               )}

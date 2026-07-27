@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   chiefAdminLogin: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string, role?: string) => Promise<User>;
+  googleLogin: (authData: { credential?: string; isRegistering?: boolean; name?: string; email?: string; googleId?: string; avatar?: string }) => Promise<{ success: boolean; exists: boolean; token?: string; user?: User; email?: string; googleId?: string; name?: string; avatar?: string }>;
   updateUser: (userData: User) => void;
   logout: () => void;
 }
@@ -82,6 +83,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return userData;
   };
 
+  const googleLogin = async (authData: { credential?: string; isRegistering?: boolean; name?: string; email?: string; googleId?: string; avatar?: string }) => {
+    const res = await API.post('/auth/google', authData);
+    const { token: newToken, user: userData, exists } = res.data;
+
+    if (exists && newToken && userData) {
+      setToken(newToken);
+      setUser(userData);
+      localStorage.setItem('resto_token', newToken);
+      localStorage.setItem('resto_user', JSON.stringify(userData));
+    }
+
+    return res.data;
+  };
+
   const updateUser = (userData: User) => {
     setUser(userData);
     localStorage.setItem('resto_user', JSON.stringify(userData));
@@ -108,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         chiefAdminLogin,
         register,
+        googleLogin,
         updateUser,
         logout,
       }}

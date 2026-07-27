@@ -494,8 +494,8 @@ export const WaiterDashboard: React.FC = () => {
                     <button
                       onClick={() => setSelectedCategory('ALL')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === 'ALL'
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        ? 'bg-amber-500 text-slate-950'
+                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                         }`}
                     >
                       All
@@ -505,8 +505,8 @@ export const WaiterDashboard: React.FC = () => {
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat.id
-                            ? 'bg-amber-500 text-slate-950'
-                            : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                           }`}
                       >
                         {cat.name}

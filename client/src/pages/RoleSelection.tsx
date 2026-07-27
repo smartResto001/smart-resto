@@ -13,6 +13,8 @@ import {
   X,
   KeyRound,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const RoleSelection: React.FC = () => {
@@ -23,12 +25,15 @@ export const RoleSelection: React.FC = () => {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminPasswordError, setAdminPasswordError] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Forgot Password State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [accountPasswordInput, setAccountPasswordInput] = useState('');
   const [newAdminPasswordInput, setNewAdminPasswordInput] = useState('');
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [showNewAdminPassword, setShowNewAdminPassword] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -124,8 +129,8 @@ export const RoleSelection: React.FC = () => {
         <h2 className="text-3xl md:text-4xl font-extrabold text-white text-center tracking-tight">
           Select Your Workstation
         </h2>
-        <p className="text-slate-400 text-sm mt-2 text-center max-w-xl">
-          Logged in as <span className="text-amber-400 font-semibold">{user?.name || 'User'}</span>. You can enter any role dashboard in this account.
+        <p className="text-slate-400 text-xs sm:text-sm mt-2 text-center max-w-xl">
+          Logged in as <span className="text-amber-400 font-semibold">{user?.name || 'User'}</span> ({user?.email}). You can enter any role dashboard in this account.
         </p>
 
         {/* Chief Admin Master Control Card (Featured if Chief Admin or available) */}
@@ -325,14 +330,22 @@ export const RoleSelection: React.FC = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                   <input
-                    type="password"
+                    type={showAdminPassword ? 'text' : 'password'}
                     required
                     autoFocus
                     placeholder="••••••••"
                     value={adminPasswordInput}
                     onChange={(e) => setAdminPasswordInput(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                    className="w-full pl-9 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-purple-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    title={showAdminPassword ? "Hide password" : "Show password"}
+                  >
+                    {showAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
@@ -392,26 +405,46 @@ export const RoleSelection: React.FC = () => {
             <form onSubmit={handleResetAdminPassword} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Account Login Password *</label>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  placeholder="Your main login password"
-                  value={accountPasswordInput}
-                  onChange={(e) => setAccountPasswordInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showAccountPassword ? 'text' : 'password'}
+                    required
+                    autoFocus
+                    placeholder="Your main login password"
+                    value={accountPasswordInput}
+                    onChange={(e) => setAccountPasswordInput(e.target.value)}
+                    className="w-full pl-3 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountPassword(!showAccountPassword)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    title={showAccountPassword ? "Hide password" : "Show password"}
+                  >
+                    {showAccountPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">New Admin Password (Optional)</label>
-                <input
-                  type="password"
-                  placeholder="Enter new admin passcode (or leave blank to clear)"
-                  value={newAdminPasswordInput}
-                  onChange={(e) => setNewAdminPasswordInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewAdminPassword ? 'text' : 'password'}
+                    placeholder="Enter new admin passcode (or leave blank to clear)"
+                    value={newAdminPasswordInput}
+                    onChange={(e) => setNewAdminPasswordInput(e.target.value)}
+                    className="w-full pl-3 pr-9 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAdminPassword(!showNewAdminPassword)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    title={showNewAdminPassword ? "Hide password" : "Show password"}
+                  >
+                    {showNewAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-2">

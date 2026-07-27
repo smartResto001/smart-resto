@@ -22,7 +22,10 @@ model User {
   id            String   @id @default(uuid())
   name          String
   email         String   @unique
-  password      String
+  password      String?
+  googleId      String?  @unique
+  provider      String   @default("LOCAL") // LOCAL, GOOGLE
+  avatar        String?
   adminPassword String?
   role          String   @default("WAITER") // ADMIN, WAITER, KITCHEN, CASHIER
   isLocked      Boolean  @default(false)

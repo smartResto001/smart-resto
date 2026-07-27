@@ -72,7 +72,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Navigation Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {!isRoleSelectionPage && (
             <button
               onClick={() => {
@@ -81,7 +81,7 @@ export const Navbar: React.FC = () => {
                 }
                 navigate('/role-selection');
               }}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm"
+              className="flex items-center space-x-1 px-2 sm:px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm shrink-0"
               title="Switch Role Workstation"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -89,14 +89,19 @@ export const Navbar: React.FC = () => {
             </button>
           )}
 
-          <div className="text-right hidden lg:block">
-            <p className="text-xs font-semibold text-slate-200">{user?.name || 'Staff User'}</p>
-            <p className="text-[10px] text-slate-400">{user?.email}</p>
+          {/* User Profile Info (Visible on Mobile & Desktop) */}
+          <div className="text-right flex flex-col justify-center min-w-0 max-w-[130px] xs:max-w-[160px] sm:max-w-[220px]">
+            <p className="text-[11px] sm:text-xs font-bold text-slate-100 leading-tight truncate">
+              {user?.name || 'Staff User'}
+            </p>
+            <p className="text-[9px] sm:text-[10px] text-amber-400 font-mono leading-tight truncate">
+              {user?.email}
+            </p>
           </div>
 
           <button
             onClick={logout}
-            className="p-2 rounded-xl bg-slate-800/80 text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-slate-700/60 transition-all duration-200"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-slate-700/60 transition-all duration-200 shrink-0"
             title="Logout"
           >
             <LogOut className="w-4 h-4" />

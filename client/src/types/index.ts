@@ -25,6 +25,9 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  googleId?: string | null;
+  provider?: string;
+  avatar?: string | null;
   hasAdminPassword?: boolean;
   isLocked?: boolean;
   createdAt?: string;
