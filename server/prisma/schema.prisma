@@ -27,6 +27,10 @@ model User {
   provider      String   @default("LOCAL") // LOCAL, GOOGLE
   avatar        String?
   adminPassword String?
+  hotelName     String?  @default("SmartResto")
+  hotelAddress  String?
+  hotelPhone    String?
+  hotelGst      String?
   role          String   @default("WAITER") // ADMIN, WAITER, KITCHEN, CASHIER
   isLocked      Boolean  @default(false)
   createdAt     DateTime @default(now())

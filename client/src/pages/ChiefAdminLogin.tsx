@@ -59,8 +59,8 @@ export const ChiefAdminLogin: React.FC = () => {
       <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-2xl border border-purple-500/30 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-purple-950/40 relative z-10 my-4">
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 shadow-xl shadow-purple-500/30 text-white mb-3">
-            <ShieldAlert className="w-9 h-9" />
+          <div className="inline-flex mb-3">
+            <img src="/logo.png" alt="SmartResto Chief Admin Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-purple-500/30 object-contain" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center justify-center space-x-2">
             <span>Chief Admin Portal</span>

@@ -67,6 +67,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         role: user.role,
         isLocked: user.isLocked,
         hasAdminPassword: !!user.adminPassword,
+        hotelName: user.hotelName || user.name || 'SmartResto',
+        hotelAddress: user.hotelAddress || '',
+        hotelPhone: user.hotelPhone || '',
+        hotelGst: user.hotelGst || '',
       },
     });
   } catch (error) {
@@ -174,6 +178,10 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
         role: true,
         isLocked: true,
         adminPassword: true,
+        hotelName: true,
+        hotelAddress: true,
+        hotelPhone: true,
+        hotelGst: true,
         createdAt: true,
       },
     });
@@ -192,6 +200,10 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
           role: user.role,
           isLocked: user.isLocked,
           hasAdminPassword: !!user.adminPassword,
+          hotelName: user.hotelName || user.name || 'SmartResto',
+          hotelAddress: user.hotelAddress || '',
+          hotelPhone: user.hotelPhone || '',
+          hotelGst: user.hotelGst || '',
           createdAt: user.createdAt,
         },
       });
@@ -670,6 +682,59 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
         avatar: user.avatar,
         isLocked: user.isLocked,
         hasAdminPassword: !!user.adminPassword,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHotelSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { hotelName, hotelAddress, hotelPhone, hotelGst } = req.body;
+
+    if (!hotelName || !hotelName.trim()) {
+      return res.status(400).json({ success: false, message: 'Hotel name is required' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hotelName: hotelName.trim(),
+        hotelAddress: hotelAddress ? hotelAddress.trim() : null,
+        hotelPhone: hotelPhone ? hotelPhone.trim() : null,
+        hotelGst: hotelGst ? hotelGst.trim() : null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isLocked: true,
+        adminPassword: true,
+        hotelName: true,
+        hotelAddress: true,
+        hotelPhone: true,
+        hotelGst: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Hotel details & bill header updated successfully!',
+      user: {
+        ...updatedUser,
+        hasAdminPassword: !!updatedUser.adminPassword,
+        hotelName: updatedUser.hotelName || updatedUser.name || 'SmartResto',
+        hotelAddress: updatedUser.hotelAddress || '',
+        hotelPhone: updatedUser.hotelPhone || '',
+        hotelGst: updatedUser.hotelGst || '',
       },
     });
   } catch (error) {

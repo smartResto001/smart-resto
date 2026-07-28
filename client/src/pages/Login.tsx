@@ -231,8 +231,8 @@ export const Login: React.FC = () => {
 
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 shadow-xl shadow-amber-500/20 mb-3">
-            <UtensilsCrossed className="w-8 h-8 text-slate-950" />
+          <div className="inline-flex mb-3">
+            <img src="/logo.png" alt="SmartResto Portal Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-amber-500/20 object-contain" />
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">SmartResto Portal</h1>
           <p className="text-slate-400 text-xs mt-1">

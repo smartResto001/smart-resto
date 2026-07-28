@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Category, FoodItem, Table, DashboardStats } from '../types';
-import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
+import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon, Eye, EyeOff, Building2 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -48,6 +48,55 @@ export const AdminDashboard: React.FC = () => {
   const [adminPassError, setAdminPassError] = useState('');
   const [adminPassSuccess, setAdminPassSuccess] = useState('');
   const [isSavingPass, setIsSavingPass] = useState(false);
+
+  // Hotel Info / Settings State
+  const [isHotelSettingsModalOpen, setIsHotelSettingsModalOpen] = useState(false);
+  const [hotelNameInput, setHotelNameInput] = useState(user?.hotelName || user?.name || '');
+  const [hotelAddressInput, setHotelAddressInput] = useState(user?.hotelAddress || '');
+  const [hotelPhoneInput, setHotelPhoneInput] = useState(user?.hotelPhone || '');
+  const [hotelGstInput, setHotelGstInput] = useState(user?.hotelGst || '');
+  const [hotelSettingsError, setHotelSettingsError] = useState('');
+  const [hotelSettingsSuccess, setHotelSettingsSuccess] = useState('');
+  const [isSavingHotelSettings, setIsSavingHotelSettings] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setHotelNameInput(user.hotelName || user.name || '');
+      setHotelAddressInput(user.hotelAddress || '');
+      setHotelPhoneInput(user.hotelPhone || '');
+      setHotelGstInput(user.hotelGst || '');
+    }
+  }, [user]);
+
+  const handleSaveHotelSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setHotelSettingsError('');
+    setHotelSettingsSuccess('');
+
+    if (!hotelNameInput || !hotelNameInput.trim()) {
+      setHotelSettingsError('Hotel Name is required for bill printing header.');
+      return;
+    }
+
+    setIsSavingHotelSettings(true);
+    try {
+      const res = await API.post('/auth/hotel-settings', {
+        hotelName: hotelNameInput,
+        hotelAddress: hotelAddressInput,
+        hotelPhone: hotelPhoneInput,
+        hotelGst: hotelGstInput,
+      });
+      updateUser(res.data.user);
+      setHotelSettingsSuccess(res.data.message || 'Hotel details & bill header updated!');
+      setTimeout(() => {
+        setIsHotelSettingsModalOpen(false);
+      }, 1200);
+    } catch (err: any) {
+      setHotelSettingsError(err.response?.data?.message || 'Failed to update hotel settings.');
+    } finally {
+      setIsSavingHotelSettings(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.id && user.hasAdminPassword && user.role !== 'CHIEF_ADMIN') {
@@ -329,6 +378,22 @@ export const AdminDashboard: React.FC = () => {
           >
             <Lock className="w-3.5 h-3.5" />
             <span>{user?.hasAdminPassword ? 'Change Password' : 'Set Admin Password'}</span>
+          </button>
+          <button
+            onClick={() => {
+              setHotelNameInput(user?.hotelName || user?.name || '');
+              setHotelAddressInput(user?.hotelAddress || '');
+              setHotelPhoneInput(user?.hotelPhone || '');
+              setHotelGstInput(user?.hotelGst || '');
+              setHotelSettingsError('');
+              setHotelSettingsSuccess('');
+              setIsHotelSettingsModalOpen(true);
+            }}
+            className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all shadow-inner"
+            title="Set Hotel Name & Bill Header"
+          >
+            <Building2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Hotel Info & Bill Header</span>
           </button>
         </div>
 
@@ -908,6 +973,123 @@ export const AdminDashboard: React.FC = () => {
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg"
                 >
                   Save Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HOTEL INFO & BILL HEADER MODAL */}
+      {isHotelSettingsModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 space-y-6 shadow-2xl relative">
+            <button
+              onClick={() => setIsHotelSettingsModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Hotel Info & Bill Header Settings</h3>
+                <p className="text-xs text-slate-400">Configure your restaurant/hotel details displayed on printed bill receipts</p>
+              </div>
+            </div>
+
+            {hotelSettingsError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs font-semibold flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{hotelSettingsError}</span>
+              </div>
+            )}
+
+            {hotelSettingsSuccess && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-semibold flex items-center space-x-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{hotelSettingsSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveHotelSettings} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Hotel / Restaurant Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={hotelNameInput}
+                  onChange={(e) => setHotelNameInput(e.target.value)}
+                  placeholder="e.g. Taj Hotel & Restaurant"
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">This name will be printed at the top of all thermal bill receipts.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Hotel Address</label>
+                <input
+                  type="text"
+                  value={hotelAddressInput}
+                  onChange={(e) => setHotelAddressInput(e.target.value)}
+                  placeholder="e.g. 123 Culinary Boulevard, Gourmet City"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={hotelPhoneInput}
+                    onChange={(e) => setHotelPhoneInput(e.target.value)}
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">GSTIN / Tax No.</label>
+                  <input
+                    type="text"
+                    value={hotelGstInput}
+                    onChange={(e) => setHotelGstInput(e.target.value)}
+                    placeholder="e.g. 27AAAAA0000A1Z5"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Preview of Header */}
+              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-center text-xs space-y-1">
+                <p className="text-[10px] text-amber-400 uppercase font-sans font-bold">Print Header Live Preview</p>
+                <p className="font-bold text-white uppercase text-sm">{hotelNameInput || 'HOTEL NAME'}</p>
+                <p className="text-slate-400 text-[10px]">{hotelAddressInput || 'Hotel Address'}</p>
+                {hotelPhoneInput && <p className="text-slate-400 text-[10px]">Ph: {hotelPhoneInput}</p>}
+                <p className="text-slate-400 text-[10px]">GSTIN: {hotelGstInput || '27AAAAA0000A1Z5'}</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingHotelSettings}
+                  className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg transition-all"
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>{isSavingHotelSettings ? 'SAVING...' : 'SAVE HOTEL & BILL HEADER'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHotelSettingsModalOpen(false)}
+                  className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all"
+                >
+                  Cancel
                 </button>
               </div>
             </form>

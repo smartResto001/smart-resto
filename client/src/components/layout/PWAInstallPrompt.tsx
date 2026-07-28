@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Monitor, Download, X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 
 // Capture beforeinstallprompt globally as early as possible
 if (typeof window !== 'undefined') {
@@ -9,17 +9,41 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const isStandaloneApp = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const isStandaloneMedia =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches;
+  const isNavigatorStandalone = (navigator as any).standalone === true;
+  const isAndroidAppReferrer = document.referrer.includes('android-app://');
+  return isStandaloneMedia || isNavigatorStandalone || isAndroidAppReferrer;
+};
+
 export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(
     typeof window !== 'undefined' ? (window as any).deferredPWAInstallPrompt : null
   );
   const [showPrompt, setShowPrompt] = useState<boolean>(true);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
-  const [installed, setInstalled] = useState<boolean>(false);
 
   useEffect(() => {
+    // 1. Hide inside installed standalone app window (Desktop app or Mobile installed app)
+    if (isStandaloneApp()) {
+      setShowPrompt(false);
+      return;
+    }
+
+    // 2. Check if user dismissed it in current session
+    if (sessionStorage.getItem('pwa_banner_dismissed') === 'true') {
+      setShowPrompt(false);
+      return;
+    }
+
     const checkIfDesktop = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
       setIsDesktop(!isMobileDevice && window.innerWidth >= 768);
     };
 
@@ -34,12 +58,15 @@ export const PWAInstallPrompt: React.FC = () => {
       e.preventDefault();
       (window as any).deferredPWAInstallPrompt = e;
       setDeferredPrompt(e);
-      setShowPrompt(true);
+      if (!isStandaloneApp() && sessionStorage.getItem('pwa_banner_dismissed') !== 'true') {
+        setShowPrompt(true);
+      }
     };
 
     const handleAppInstalled = () => {
-      setInstalled(true);
       setShowPrompt(false);
+      (window as any).deferredPWAInstallPrompt = null;
+      setDeferredPrompt(null);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -52,6 +79,11 @@ export const PWAInstallPrompt: React.FC = () => {
     };
   }, []);
 
+  const handleDismiss = () => {
+    sessionStorage.setItem('pwa_banner_dismissed', 'true');
+    setShowPrompt(false);
+  };
+
   const handleInstallClick = async () => {
     const promptEvent = deferredPrompt || (window as any).deferredPWAInstallPrompt;
 
@@ -61,7 +93,6 @@ export const PWAInstallPrompt: React.FC = () => {
         const { outcome } = await promptEvent.userChoice;
         if (outcome === 'accepted') {
           setShowPrompt(false);
-          setInstalled(true);
         }
         setDeferredPrompt(null);
         (window as any).deferredPWAInstallPrompt = null;
@@ -69,27 +100,24 @@ export const PWAInstallPrompt: React.FC = () => {
         console.error('PWA install error:', err);
       }
     } else {
-      // If browser hasn't captured native prompt yet or app is already installed
       alert(
         isDesktop
-          ? 'To add SmartResto app icon to your Desktop:\nClick the Install icon (⊕ or 💻) in your browser address bar at top right.'
-          : 'To install SmartResto:\nOpen browser menu (⋮ or Share) and select "Add to Home Screen".'
+          ? 'To add SmartResto app icon to your Desktop:\n1. Click the Install icon (⊕ or 💻) in your browser address bar at top right.\nOR\n2. Open browser menu (⋮) -> Cast, save & share -> Install SmartResto.'
+          : 'To install SmartResto Mobile App:\nOpen browser menu (⋮ or Share icon) and select "Add to Home Screen" or "Install App".'
       );
     }
   };
 
-  if (!showPrompt || installed) return null;
+  if (!showPrompt || isStandaloneApp()) return null;
 
   return (
     <div className="fixed top-4 left-4 right-4 z-50 max-w-md mx-auto bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 p-3.5 rounded-2xl shadow-2xl flex items-center justify-between animate-bounce">
       <div className="flex items-center space-x-3">
-        <div className="p-2 bg-slate-950/20 rounded-xl shrink-0">
-          {isDesktop ? (
-            <Monitor className="w-5 h-5 text-slate-950" />
-          ) : (
-            <Smartphone className="w-5 h-5 text-slate-950" />
-          )}
-        </div>
+        <img
+          src="/logo.png"
+          alt="SmartResto App Icon"
+          className="w-10 h-10 rounded-xl shadow-md shrink-0 object-contain"
+        />
         <div>
           <h4 className="font-extrabold text-xs">
             {isDesktop ? 'Add SmartResto to Desktop' : 'Install SmartResto Mobile App'}
@@ -110,8 +138,9 @@ export const PWAInstallPrompt: React.FC = () => {
           <span>{isDesktop ? 'Add to Desktop' : 'Install'}</span>
         </button>
         <button
-          onClick={() => setShowPrompt(false)}
+          onClick={handleDismiss}
           className="p-1 text-slate-950 hover:opacity-75 cursor-pointer"
+          title="Dismiss banner"
         >
           <X className="w-4 h-4" />
         </button>

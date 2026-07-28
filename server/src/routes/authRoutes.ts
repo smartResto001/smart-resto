@@ -9,6 +9,7 @@ import {
   resetAdminPasswordWithAccountPassword,
   forgotPassword,
   googleAuth,
+  updateHotelSettings,
 } from '../controllers/authController';
 import { authenticateJWT } from '../middleware/authMiddleware';
 
@@ -23,5 +24,6 @@ router.get('/me', authenticateJWT, getMe);
 router.post('/admin-password/set', authenticateJWT, setAdminPassword);
 router.post('/admin-password/verify', authenticateJWT, verifyAdminPassword);
 router.post('/admin-password/reset', authenticateJWT, resetAdminPasswordWithAccountPassword);
+router.post('/hotel-settings', authenticateJWT, updateHotelSettings);
 
 export default router;

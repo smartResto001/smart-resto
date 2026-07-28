@@ -25,6 +25,10 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  hotelName?: string | null;
+  hotelAddress?: string | null;
+  hotelPhone?: string | null;
+  hotelGst?: string | null;
   googleId?: string | null;
   provider?: string;
   avatar?: string | null;

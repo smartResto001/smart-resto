@@ -6,7 +6,10 @@ import { Receipt, DollarSign, CreditCard, QrCode, Printer, CheckCircle2, Search,
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 
+import { useAuth } from '../contexts/AuthContext';
+
 export const BillingDashboard: React.FC = () => {
+  const { user } = useAuth();
   const { socket, playNotificationSound } = useSocket();
 
   const [unbilledOrders, setUnbilledOrders] = useState<Order[]>([]);
@@ -425,9 +428,18 @@ export const BillingDashboard: React.FC = () => {
             {/* Printable Receipt Content */}
             <div id="thermal-receipt" className="bg-white text-slate-900 p-6 rounded-2xl font-mono text-xs space-y-4 shadow-inner">
               <div className="text-center space-y-1 border-b border-slate-200 pb-3">
-                <h2 className="text-base font-black uppercase tracking-wider font-sans">SMART RESTO</h2>
-                <p className="text-[10px] text-slate-600">123 Culinary Boulevard, Gourmet City</p>
-                <p className="text-[10px] text-slate-600">GSTIN: 27AAAAA0000A1Z5</p>
+                <h2 className="text-base font-black uppercase tracking-wider font-sans">
+                  {user?.hotelName || user?.name || 'SMART RESTO'}
+                </h2>
+                <p className="text-[10px] text-slate-600">
+                  {user?.hotelAddress || '123 Culinary Boulevard, Gourmet City'}
+                </p>
+                {user?.hotelPhone && (
+                  <p className="text-[10px] text-slate-600">Ph: {user.hotelPhone}</p>
+                )}
+                <p className="text-[10px] text-slate-600">
+                  {user?.hotelGst ? `GSTIN: ${user.hotelGst}` : 'GSTIN: 27AAAAA0000A1Z5'}
+                </p>
                 <p className="text-[10px] font-bold text-slate-800">TAX INVOICE</p>
               </div>
 

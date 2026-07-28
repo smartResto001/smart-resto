@@ -32,9 +32,7 @@ export const Navbar: React.FC = () => {
 
         {/* Brand Logo & Title */}
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/role-selection')}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
-            <UtensilsCrossed className="w-6 h-6 text-slate-950" />
-          </div>
+          <img src="/logo.png" alt="SmartResto Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-amber-500/20 shrink-0 object-contain" />
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="font-bold text-lg text-slate-100 leading-none tracking-tight font-sans">
