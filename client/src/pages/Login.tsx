@@ -109,8 +109,8 @@ export const Login: React.FC = () => {
           avatar: gAvatar,
         });
 
-        // IF USER EXISTS: Automatically log in & redirect to Role Selection
-        if (response.exists && response.token) {
+        // Automatically log in & redirect to Role Selection or Chief Admin
+        if (response.token || response.exists) {
           if (response.user?.role === 'CHIEF_ADMIN') {
             navigate('/chief-admin');
           } else {
@@ -118,14 +118,6 @@ export const Login: React.FC = () => {
           }
           return;
         }
-
-        // IF USER DOES NOT EXIST: Redirect/switch to Register page with prefilled values
-        setIsSignUp(true);
-        setIsGoogleUser(true);
-        setEmail(gEmail || '');
-        setName(gName || gEmail?.split('@')[0] || '');
-        setGoogleId(gId || '');
-        setGoogleAvatar(gAvatar || '');
       } catch (err: any) {
         setError(err.response?.data?.message || 'Google Authentication failed. Please try again.');
       } finally {

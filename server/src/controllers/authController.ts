@@ -624,22 +624,7 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    // IF USER DOES NOT EXIST:
-    // If not registering yet (e.g. clicked "Continue with Google" on Login page), do NOT create user automatically.
-    // Return verified Google details so frontend can redirect to prefilled Register page.
-    if (!isRegistering && !providedName) {
-      return res.status(200).json({
-        success: true,
-        exists: false,
-        message: 'Account does not exist. Redirecting to complete registration.',
-        email: cleanEmail,
-        googleId,
-        name,
-        avatar,
-      });
-    }
-
-    // Create User when registering
+    // IF USER DOES NOT EXIST: Automatically create account with Google details and log in
     const finalName = providedName || name || cleanEmail.split('@')[0];
 
     user = await prisma.user.create({
@@ -650,11 +635,12 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
         provider: 'GOOGLE',
         avatar: avatar || null,
         password: null,
-        role: 'WAITER',
+        role: 'ADMIN',
       },
     });
 
-    sendWelcomeEmail(user.email, user.name, user.role || 'WAITER');
+    // Send welcome email asynchronously
+    sendWelcomeEmail(user.email, user.name, user.role || 'ADMIN');
 
     const token = jwt.sign(
       {
@@ -667,10 +653,10 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
       { expiresIn: '1d' }
     );
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       exists: true,
-      message: 'Account created successfully with Google',
+      message: 'Account created successfully and logged in with Google Account',
       token,
       user: {
         id: user.id,

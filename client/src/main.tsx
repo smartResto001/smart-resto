@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App.tsx';
 import './index.css';
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1047648356872-dummyclientid.apps.googleusercontent.com';
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '48148024154-7plmlpko2q8poujo6gn80ah4s0sdpsjg.apps.googleusercontent.com';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
