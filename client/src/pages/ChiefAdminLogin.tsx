@@ -60,7 +60,7 @@ export const ChiefAdminLogin: React.FC = () => {
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="inline-flex mb-3">
-            <img src="/logo.png" alt="SmartResto Chief Admin Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-purple-500/30 object-contain" />
+            <img src="/app-logo-512.png" alt="SmartResto Chief Admin Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-purple-500/30 object-contain" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center justify-center space-x-2">
             <span>Chief Admin Portal</span>

@@ -114,7 +114,7 @@ export const PWAInstallPrompt: React.FC = () => {
     <div className="fixed top-4 left-4 right-4 z-50 max-w-md mx-auto bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 p-3.5 rounded-2xl shadow-2xl flex items-center justify-between animate-bounce">
       <div className="flex items-center space-x-3">
         <img
-          src="/logo.png"
+          src="/app-logo-512.png"
           alt="SmartResto App Icon"
           className="w-10 h-10 rounded-xl shadow-md shrink-0 object-contain"
         />

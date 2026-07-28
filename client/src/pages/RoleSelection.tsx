@@ -126,7 +126,7 @@ export const RoleSelection: React.FC = () => {
         </div>
 
         {/* Heading */}
-        <img src="/logo.png" alt="SmartResto Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-amber-500/20 mb-3 object-contain" />
+        <img src="/app-logo-512.png" alt="SmartResto Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-amber-500/20 mb-3 object-contain" />
         <h2 className="text-3xl md:text-4xl font-extrabold text-white text-center tracking-tight">
           Select Your Workstation
         </h2>
