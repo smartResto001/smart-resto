@@ -1,11 +1,13 @@
-const CACHE_NAME = 'smartresto-v2';
+const CACHE_NAME = 'smartresto-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/favicon.svg',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/manifest.json?v=3',
+  '/favicon.svg?v=3',
+  '/logo.png?v=3',
+  '/icon-192.png?v=3',
+  '/icon-512.png?v=3',
+  '/apple-touch-icon.png?v=3'
 ];
 
 self.addEventListener('install', (event) => {
