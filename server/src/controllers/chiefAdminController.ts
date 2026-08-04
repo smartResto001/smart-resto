@@ -24,6 +24,17 @@ export const getAllHotelAccounts = async (req: Request, res: Response, next: Nex
         email: true,
         role: true,
         isLocked: true,
+        planName: true,
+        isTrial: true,
+        trialDays: true,
+        trialExpiresAt: true,
+        isPaid: true,
+        monthlyFee: true,
+        subscriptionMonths: true,
+        discountAmount: true,
+        totalPayable: true,
+        subscriptionExpiresAt: true,
+        lastPaidAt: true,
         createdAt: true,
         _count: {
           select: {
@@ -42,6 +53,17 @@ export const getAllHotelAccounts = async (req: Request, res: Response, next: Nex
       email: ca.email,
       role: 'CHIEF_ADMIN',
       isLocked: ca.isLocked,
+      planName: 'CHIEF_ADMIN',
+      isTrial: false,
+      trialDays: 0,
+      trialExpiresAt: null,
+      isPaid: true,
+      monthlyFee: 0,
+      subscriptionMonths: 0,
+      discountAmount: 0,
+      totalPayable: 0,
+      subscriptionExpiresAt: null,
+      lastPaidAt: null,
       createdAt: ca.createdAt,
       tableCount: 0,
       orderCount: 0,
@@ -54,6 +76,17 @@ export const getAllHotelAccounts = async (req: Request, res: Response, next: Nex
       email: u.email,
       role: u.role,
       isLocked: u.isLocked,
+      planName: u.planName,
+      isTrial: u.isTrial,
+      trialDays: u.trialDays,
+      trialExpiresAt: u.trialExpiresAt,
+      isPaid: u.isPaid,
+      monthlyFee: u.monthlyFee,
+      subscriptionMonths: u.subscriptionMonths,
+      discountAmount: u.discountAmount,
+      totalPayable: u.totalPayable,
+      subscriptionExpiresAt: u.subscriptionExpiresAt,
+      lastPaidAt: u.lastPaidAt,
       createdAt: u.createdAt,
       tableCount: u._count.tables,
       orderCount: u._count.userOrders,
@@ -243,6 +276,23 @@ export const createHotelAccount = async (req: Request, res: Response, next: Next
       });
     }
 
+    let defaults = await prisma.systemSettings.findUnique({ where: { id: 'default' } });
+    if (!defaults) {
+      defaults = await prisma.systemSettings.create({
+        data: {
+          id: 'default',
+          defaultPlanName: 'Basic Plan',
+          defaultMonthlyFee: 1000,
+          defaultSubscriptionMonths: 1,
+          defaultDiscountAmount: 0,
+          defaultTrialDays: 2,
+        },
+      });
+    }
+
+    const trialExpiresAt = new Date(Date.now() + defaults.defaultTrialDays * 24 * 60 * 60 * 1000);
+    const totalPayable = Math.max(0, defaults.defaultMonthlyFee * defaults.defaultSubscriptionMonths - defaults.defaultDiscountAmount);
+
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -250,6 +300,15 @@ export const createHotelAccount = async (req: Request, res: Response, next: Next
         password: hashedPassword,
         role: role as Role,
         isLocked: false,
+        planName: defaults.defaultPlanName,
+        isTrial: true,
+        trialDays: defaults.defaultTrialDays,
+        trialExpiresAt: trialExpiresAt,
+        monthlyFee: defaults.defaultMonthlyFee,
+        subscriptionMonths: defaults.defaultSubscriptionMonths,
+        discountAmount: defaults.defaultDiscountAmount,
+        totalPayable: totalPayable,
+        isPaid: false,
       },
       select: {
         id: true,
@@ -257,6 +316,16 @@ export const createHotelAccount = async (req: Request, res: Response, next: Next
         email: true,
         role: true,
         isLocked: true,
+        planName: true,
+        isTrial: true,
+        trialDays: true,
+        trialExpiresAt: true,
+        monthlyFee: true,
+        subscriptionMonths: true,
+        discountAmount: true,
+        totalPayable: true,
+        isPaid: true,
+        subscriptionExpiresAt: true,
         createdAt: true,
       },
     });
@@ -265,10 +334,142 @@ export const createHotelAccount = async (req: Request, res: Response, next: Next
 
     return res.status(201).json({
       success: true,
-      message: `Account for ${newUser.name} created successfully`,
+      message: `Account for ${newUser.name} created successfully with a ${defaults.defaultTrialDays}-day trial!`,
       data: newUser,
     });
   } catch (error) {
     next(error);
   }
 };
+
+export const updateSubscriptionSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { planName, monthlyFee, subscriptionMonths, discountAmount, isTrial, trialDays, trialExpiresAt, isPaid, isLocked, subscriptionExpiresAt } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Hotel user account not found' });
+    }
+
+    const fee = typeof monthlyFee === 'number' && monthlyFee >= 0 ? monthlyFee : user.monthlyFee;
+    const months = typeof subscriptionMonths === 'number' && subscriptionMonths >= 1 ? Math.floor(subscriptionMonths) : user.subscriptionMonths;
+    const discount = typeof discountAmount === 'number' && discountAmount >= 0 ? discountAmount : user.discountAmount;
+    const payable = Math.max(0, fee * months - discount);
+
+    let expiry: Date | null = user.subscriptionExpiresAt;
+    if (subscriptionExpiresAt) {
+      expiry = new Date(subscriptionExpiresAt);
+    } else if (isPaid === true && !user.isPaid) {
+      const now = new Date();
+      expiry = new Date(now);
+      expiry.setMonth(expiry.getMonth() + months);
+    }
+
+    let calculatedTrialExpiry: Date | null = user.trialExpiresAt;
+    if (trialExpiresAt) {
+      calculatedTrialExpiry = new Date(trialExpiresAt);
+    } else if (typeof trialDays === 'number' && trialDays >= 0) {
+      calculatedTrialExpiry = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        planName: planName ? String(planName).trim() : user.planName,
+        monthlyFee: fee,
+        subscriptionMonths: months,
+        discountAmount: discount,
+        totalPayable: payable,
+        ...(typeof isTrial === 'boolean' ? { isTrial } : {}),
+        ...(typeof trialDays === 'number' && trialDays >= 0 ? { trialDays: Math.floor(trialDays) } : {}),
+        trialExpiresAt: calculatedTrialExpiry,
+        ...(typeof isPaid === 'boolean' ? { isPaid, lastPaidAt: isPaid ? new Date() : user.lastPaidAt } : {}),
+        ...(typeof isLocked === 'boolean' ? { isLocked } : {}),
+        subscriptionExpiresAt: expiry,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isLocked: true,
+        planName: true,
+        isTrial: true,
+        trialDays: true,
+        trialExpiresAt: true,
+        isPaid: true,
+        monthlyFee: true,
+        subscriptionMonths: true,
+        discountAmount: true,
+        totalPayable: true,
+        subscriptionExpiresAt: true,
+        lastPaidAt: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Subscription & Trial updated for ${updatedUser.name}: Plan "${updatedUser.planName}", ${updatedUser.isTrial ? `Trial (${updatedUser.trialDays}d)` : 'Paid Subscription'}, ₹${updatedUser.monthlyFee}/mo, Net Total: ₹${updatedUser.totalPayable}.`,
+      data: updatedUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getGlobalSubscriptionSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    let settings = await prisma.systemSettings.findUnique({ where: { id: 'default' } });
+    if (!settings) {
+      settings = await prisma.systemSettings.create({
+        data: {
+          id: 'default',
+          defaultPlanName: 'Basic Plan',
+          defaultMonthlyFee: 1000,
+          defaultSubscriptionMonths: 1,
+          defaultDiscountAmount: 0,
+          defaultTrialDays: 2,
+        },
+      });
+    }
+    return res.status(200).json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateGlobalSubscriptionSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { defaultPlanName, defaultMonthlyFee, defaultSubscriptionMonths, defaultDiscountAmount, defaultTrialDays } = req.body;
+
+    const settings = await prisma.systemSettings.upsert({
+      where: { id: 'default' },
+      update: {
+        ...(defaultPlanName ? { defaultPlanName: String(defaultPlanName).trim() } : {}),
+        ...(typeof defaultMonthlyFee === 'number' && defaultMonthlyFee >= 0 ? { defaultMonthlyFee } : {}),
+        ...(typeof defaultSubscriptionMonths === 'number' && defaultSubscriptionMonths >= 1 ? { defaultSubscriptionMonths: Math.floor(defaultSubscriptionMonths) } : {}),
+        ...(typeof defaultDiscountAmount === 'number' && defaultDiscountAmount >= 0 ? { defaultDiscountAmount } : {}),
+        ...(typeof defaultTrialDays === 'number' && defaultTrialDays >= 0 ? { defaultTrialDays: Math.floor(defaultTrialDays) } : {}),
+      },
+      create: {
+        id: 'default',
+        defaultPlanName: defaultPlanName ? String(defaultPlanName).trim() : 'Basic Plan',
+        defaultMonthlyFee: typeof defaultMonthlyFee === 'number' && defaultMonthlyFee >= 0 ? defaultMonthlyFee : 1000,
+        defaultSubscriptionMonths: typeof defaultSubscriptionMonths === 'number' && defaultSubscriptionMonths >= 1 ? Math.floor(defaultSubscriptionMonths) : 1,
+        defaultDiscountAmount: typeof defaultDiscountAmount === 'number' && defaultDiscountAmount >= 0 ? defaultDiscountAmount : 0,
+        defaultTrialDays: typeof defaultTrialDays === 'number' && defaultTrialDays >= 0 ? Math.floor(defaultTrialDays) : 2,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Global subscription & trial settings updated: Plan "${settings.defaultPlanName}", ${settings.defaultTrialDays}-Day Trial, ₹${settings.defaultMonthlyFee}/mo`,
+      data: settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -50,3 +50,17 @@ export const PaymentMethod = {
   WALLET: 'WALLET',
   SPLIT: 'SPLIT',
 } as const;
+
+export type OrderSource = 'WAITER' | 'QR';
+export const OrderSource = {
+  WAITER: 'WAITER',
+  QR: 'QR',
+} as const;
+
+export type CustomerType = 'REGULAR' | 'WAITER_CUSTOMER' | 'QR_CUSTOMER';
+export const CustomerType = {
+  REGULAR: 'REGULAR',
+  WAITER_CUSTOMER: 'WAITER_CUSTOMER',
+  QR_CUSTOMER: 'QR_CUSTOMER',
+} as const;
+

@@ -32,6 +32,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = () => {
     return <Navigate to="/chief-admin/login" replace />;
   }
 
+  const isTrialActive = user.isTrial === true && !!user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date();
+  const isPaidActive = user.isPaid === true && (!user.subscriptionExpiresAt || new Date(user.subscriptionExpiresAt) > new Date());
+
+  const isSubscriptionLocked =
+    user.role !== 'CHIEF_ADMIN' &&
+    (user.isLocked === true || (!isTrialActive && !isPaidActive));
+
+  if (isSubscriptionLocked && location.pathname !== '/role-selection') {
+    return <Navigate to="/role-selection" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative">
       <Navbar />

@@ -35,6 +35,13 @@ export const initSocketIO = (httpServer: HttpServer) => {
       }
     });
 
+    socket.on('join:table', (tableId: string) => {
+      if (tableId) {
+        socket.join(`table:${tableId}`);
+        console.log(`📱 Customer Socket ${socket.id} joined room: table:${tableId}`);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`❌ Client disconnected: ${socket.id}`);
     });

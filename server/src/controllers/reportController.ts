@@ -38,6 +38,36 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
 
     const avgOrderValue = totalCompletedOrders > 0 ? totalRevenue / totalCompletedOrders : 0;
 
+    // QR vs Waiter Orders Breakdown
+    const totalQrOrders = await prisma.order.count({
+      where: {
+        orderSource: 'QR',
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    const totalWaiterOrders = await prisma.order.count({
+      where: {
+        orderSource: 'WAITER',
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    // Most Ordered Table
+    const topTableRaw = await prisma.order.groupBy({
+      by: ['tableId'],
+      where: userId ? { userId } : {},
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 1,
+    });
+
+    let mostOrderedTable: number | string | null = null;
+    if (topTableRaw.length > 0) {
+      const tbl = await prisma.table.findUnique({ where: { id: topTableRaw[0].tableId } });
+      mostOrderedTable = tbl ? tbl.tableNumber : null;
+    }
+
     // Top selling foods
     const topFoodsRaw = await prisma.orderItem.groupBy({
       by: ['foodItemId'],
@@ -63,6 +93,8 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
       })
     );
 
+    const mostOrderedFood = topFoods.length > 0 ? topFoods[0].name : null;
+
     // Recent 10 payments
     const recentPayments = await prisma.payment.findMany({
       where: userId ? { userId } : {},
@@ -84,6 +116,10 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
         activeOrdersCount,
         totalRevenue,
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
+        totalQrOrders,
+        totalWaiterOrders,
+        mostOrderedTable,
+        mostOrderedFood,
         topFoods,
         recentPayments,
       },

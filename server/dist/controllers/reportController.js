@@ -32,6 +32,32 @@ const getDashboardStats = async (req, res, next) => {
         });
         const totalRevenue = totalRevenueAgg._sum.grandTotal || 0;
         const avgOrderValue = totalCompletedOrders > 0 ? totalRevenue / totalCompletedOrders : 0;
+        // QR vs Waiter Orders Breakdown
+        const totalQrOrders = await prisma_1.prisma.order.count({
+            where: {
+                orderSource: 'QR',
+                ...(userId ? { userId } : {}),
+            },
+        });
+        const totalWaiterOrders = await prisma_1.prisma.order.count({
+            where: {
+                orderSource: 'WAITER',
+                ...(userId ? { userId } : {}),
+            },
+        });
+        // Most Ordered Table
+        const topTableRaw = await prisma_1.prisma.order.groupBy({
+            by: ['tableId'],
+            where: userId ? { userId } : {},
+            _count: { id: true },
+            orderBy: { _count: { id: 'desc' } },
+            take: 1,
+        });
+        let mostOrderedTable = null;
+        if (topTableRaw.length > 0) {
+            const tbl = await prisma_1.prisma.table.findUnique({ where: { id: topTableRaw[0].tableId } });
+            mostOrderedTable = tbl ? tbl.tableNumber : null;
+        }
         // Top selling foods
         const topFoodsRaw = await prisma_1.prisma.orderItem.groupBy({
             by: ['foodItemId'],
@@ -53,6 +79,7 @@ const getDashboardStats = async (req, res, next) => {
                 price: item?.price || 0,
             };
         }));
+        const mostOrderedFood = topFoods.length > 0 ? topFoods[0].name : null;
         // Recent 10 payments
         const recentPayments = await prisma_1.prisma.payment.findMany({
             where: userId ? { userId } : {},
@@ -73,6 +100,10 @@ const getDashboardStats = async (req, res, next) => {
                 activeOrdersCount,
                 totalRevenue,
                 avgOrderValue: Math.round(avgOrderValue * 100) / 100,
+                totalQrOrders,
+                totalWaiterOrders,
+                mostOrderedTable,
+                mostOrderedFood,
                 topFoods,
                 recentPayments,
             },

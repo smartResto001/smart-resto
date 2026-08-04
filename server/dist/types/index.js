@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PaymentMethod = exports.OrderStatus = exports.TableStatus = exports.Role = void 0;
+exports.CustomerType = exports.OrderSource = exports.PaymentMethod = exports.OrderStatus = exports.TableStatus = exports.Role = void 0;
 exports.Role = {
     CHIEF_ADMIN: 'CHIEF_ADMIN',
     ADMIN: 'ADMIN',
@@ -31,4 +31,13 @@ exports.PaymentMethod = {
     DEBIT_CARD: 'DEBIT_CARD',
     WALLET: 'WALLET',
     SPLIT: 'SPLIT',
+};
+exports.OrderSource = {
+    WAITER: 'WAITER',
+    QR: 'QR',
+};
+exports.CustomerType = {
+    REGULAR: 'REGULAR',
+    WAITER_CUSTOMER: 'WAITER_CUSTOMER',
+    QR_CUSTOMER: 'QR_CUSTOMER',
 };

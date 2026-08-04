@@ -11,6 +11,7 @@ import billingRoutes from './routes/billingRoutes';
 import reportRoutes from './routes/reportRoutes';
 import userRoutes from './routes/userRoutes';
 import chiefAdminRoutes from './routes/chiefAdminRoutes';
+import publicQrRoutes from './routes/publicQrRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 import { corsOptions } from './utils/corsUtils';
@@ -49,6 +50,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chief-admin', chiefAdminRoutes);
+app.use('/api/public/qr', publicQrRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

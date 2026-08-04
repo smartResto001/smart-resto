@@ -24,8 +24,16 @@ export const WaiterDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Ready Food Toast Notifications state
-  const [readyNotifications, setReadyNotifications] = useState<{ id: string; orderNumber: string; tableNumber: number; customerName: string }[]>([]);
+  // Ready Food Toast Notifications & Waiter Call alerts state
+  const [readyNotifications, setReadyNotifications] = useState<{
+    id: string;
+    title: string;
+    message: string;
+    tableNumber?: number | string;
+    orderNumber?: string;
+    customerName?: string;
+    type?: string;
+  }[]>([]);
 
   useEffect(() => {
     fetchInitialData();
@@ -50,7 +58,38 @@ export const WaiterDashboard: React.FC = () => {
       playNotificationSound();
       setReadyNotifications((prev) => [
         ...prev,
-        { id: Date.now().toString(), orderNumber: data.orderNumber, tableNumber: data.tableNumber, customerName: data.customerName },
+        {
+          id: Date.now().toString(),
+          title: '🍲 Food Ready to Serve!',
+          message: `Order #${data.orderNumber} for Table ${data.tableNumber} (${data.customerName})`,
+          type: 'ready',
+        },
+      ]);
+    });
+
+    socket.on('waiter:call', (data: any) => {
+      playNotificationSound();
+      setReadyNotifications((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          title: `🛎️ Table ${data.tableNumber} - ${data.requestType}`,
+          message: `${data.customerName} requested ${data.requestType}${data.notes ? `: ${data.notes}` : ''}`,
+          type: 'call',
+        },
+      ]);
+    });
+
+    socket.on('waiter:qr_order', (data: any) => {
+      playNotificationSound();
+      setReadyNotifications((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          title: `📱 Table ${data.tableNumber} Placed QR Order`,
+          message: `${data.customerName} ordered ${data.itemsCount} items (Order #${data.orderNumber})`,
+          type: 'qr',
+        },
       ]);
     });
 
@@ -62,6 +101,8 @@ export const WaiterDashboard: React.FC = () => {
       socket.off('order:created');
       socket.off('order:status_changed');
       socket.off('kitchen:food_ready');
+      socket.off('waiter:call');
+      socket.off('waiter:qr_order');
       socket.off('table:updated');
     };
   }, [socket]);
@@ -241,7 +282,7 @@ export const WaiterDashboard: React.FC = () => {
       {readyNotifications.map((notif) => (
         <div
           key={notif.id}
-          className="p-4 bg-gradient-to-r from-emerald-950 to-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl flex items-center justify-between animate-bounce"
+          className="p-4 bg-gradient-to-r from-emerald-950 to-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl flex items-center justify-between"
         >
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl">
@@ -249,10 +290,10 @@ export const WaiterDashboard: React.FC = () => {
             </div>
             <div>
               <h4 className="font-bold text-slate-100 text-base">
-                🔔 FOOD READY! Table {notif.tableNumber}
+                {notif.title}
               </h4>
               <p className="text-xs text-slate-300">
-                Order #{notif.orderNumber} for <span className="font-bold text-amber-300">{notif.customerName}</span> is cooked & ready for service.
+                {notif.message}
               </p>
             </div>
           </div>
@@ -690,6 +731,39 @@ export const WaiterDashboard: React.FC = () => {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* Floating Waiter Toast Notifications Stack */}
+      {readyNotifications.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm w-full">
+          {readyNotifications.map((notif) => (
+            <div
+              key={notif.id}
+              className={`p-4 rounded-2xl border shadow-2xl flex items-start justify-between gap-3 text-slate-100 animate-slideUp ${
+                notif.type === 'call'
+                  ? 'bg-amber-950/90 border-amber-500/60 shadow-amber-500/20'
+                  : notif.type === 'qr'
+                  ? 'bg-sky-950/90 border-sky-500/60 shadow-sky-500/20'
+                  : 'bg-emerald-950/90 border-emerald-500/60 shadow-emerald-500/20'
+              }`}
+            >
+              <div className="space-y-1">
+                <div className="font-extrabold text-sm flex items-center gap-1.5">
+                  <BellRing className="w-4 h-4 shrink-0" /> {notif.title}
+                </div>
+                <div className="text-xs text-slate-300">{notif.message}</div>
+              </div>
+              <button
+                onClick={() =>
+                  setReadyNotifications((prev) => prev.filter((n) => n.id !== notif.id))
+                }
+                className="p-1 text-slate-400 hover:text-white rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

@@ -104,10 +104,14 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
       });
 
       for (const ord of activeTableOrders) {
-        emitTo.emit('order:status_changed', { ...ord, status: OrderStatus.PAID });
+        const updatedOrd = { ...ord, status: OrderStatus.PAID };
+        emitTo.emit('order:status_changed', updatedOrd);
+        io.to(`table:${ord.tableId}`).emit('order:status_changed', updatedOrd);
+        io.to(`table:${ord.tableId}`).emit('customer:order_updated', updatedOrd);
       }
 
       emitTo.emit('table:updated', { id: primaryOrder.tableId, status: TableStatus.AVAILABLE });
+      io.to(`table:${primaryOrder.tableId}`).emit('table:updated', { id: primaryOrder.tableId, status: TableStatus.AVAILABLE });
     }
 
     return res.status(200).json({

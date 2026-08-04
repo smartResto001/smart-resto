@@ -337,9 +337,8 @@ export const Login: React.FC = () => {
                 placeholder={isSignUp ? 'yourname@gmail.com' : 'user@gmail.com'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all ${
-                  isGoogleUser ? 'opacity-80 cursor-not-allowed bg-slate-850' : ''
-                }`}
+                className={`w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all ${isGoogleUser ? 'opacity-80 cursor-not-allowed bg-slate-850' : ''
+                  }`}
               />
             </div>
           </div>

@@ -195,6 +195,8 @@ const updateOrderStatus = async (req, res, next) => {
             const targetRoom = order.userId ? `account:${order.userId}` : null;
             const emitTo = targetRoom ? io.to(targetRoom) : io;
             emitTo.emit('order:status_changed', order);
+            io.to(`table:${order.tableId}`).emit('order:status_changed', order);
+            io.to(`table:${order.tableId}`).emit('customer:order_updated', order);
             // Targeted alerts
             if (status === types_1.OrderStatus.READY) {
                 emitTo.emit('kitchen:food_ready', {

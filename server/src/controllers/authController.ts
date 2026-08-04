@@ -7,6 +7,23 @@ import { isGmailAccount, sendWelcomeEmail } from '../services/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smart_resto_super_secret_jwt_key_2026';
 
+export const getSystemDefaults = async () => {
+  let settings = await prisma.systemSettings.findUnique({ where: { id: 'default' } });
+  if (!settings) {
+    settings = await prisma.systemSettings.create({
+      data: {
+        id: 'default',
+        defaultPlanName: 'Basic Plan',
+        defaultMonthlyFee: 1000,
+        defaultSubscriptionMonths: 1,
+        defaultDiscountAmount: 0,
+        defaultTrialDays: 2,
+      },
+    });
+  }
+  return settings;
+};
+
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
@@ -66,11 +83,24 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         email: user.email,
         role: user.role,
         isLocked: user.isLocked,
+        planName: user.planName,
+        isTrial: user.isTrial,
+        trialDays: user.trialDays,
+        trialExpiresAt: user.trialExpiresAt,
+        isPaid: user.isPaid,
+        monthlyFee: user.monthlyFee,
+        subscriptionMonths: user.subscriptionMonths,
+        discountAmount: user.discountAmount,
+        totalPayable: user.totalPayable,
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
+        lastPaidAt: user.lastPaidAt,
         hasAdminPassword: !!user.adminPassword,
         hotelName: user.hotelName || user.name || 'SmartResto',
         hotelAddress: user.hotelAddress || '',
         hotelPhone: user.hotelPhone || '',
         hotelGst: user.hotelGst || '',
+        upiId: user.upiId || '',
+        upiName: user.upiName || '',
       },
     });
   } catch (error) {
@@ -177,11 +207,24 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
         email: true,
         role: true,
         isLocked: true,
+        planName: true,
+        isTrial: true,
+        trialDays: true,
+        trialExpiresAt: true,
+        isPaid: true,
+        monthlyFee: true,
+        subscriptionMonths: true,
+        discountAmount: true,
+        totalPayable: true,
+        subscriptionExpiresAt: true,
+        lastPaidAt: true,
         adminPassword: true,
         hotelName: true,
         hotelAddress: true,
         hotelPhone: true,
         hotelGst: true,
+        upiId: true,
+        upiName: true,
         createdAt: true,
       },
     });
@@ -199,11 +242,24 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
           email: user.email,
           role: user.role,
           isLocked: user.isLocked,
+          planName: user.planName,
+          isTrial: user.isTrial,
+          trialDays: user.trialDays,
+          trialExpiresAt: user.trialExpiresAt,
+          isPaid: user.isPaid,
+          monthlyFee: user.monthlyFee,
+          subscriptionMonths: user.subscriptionMonths,
+          discountAmount: user.discountAmount,
+          totalPayable: user.totalPayable,
+          subscriptionExpiresAt: user.subscriptionExpiresAt,
+          lastPaidAt: user.lastPaidAt,
           hasAdminPassword: !!user.adminPassword,
           hotelName: user.hotelName || user.name || 'SmartResto',
           hotelAddress: user.hotelAddress || '',
           hotelPhone: user.hotelPhone || '',
           hotelGst: user.hotelGst || '',
+          upiId: user.upiId || '',
+          upiName: user.upiName || '',
           createdAt: user.createdAt,
         },
       });
@@ -267,12 +323,25 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const defaults = await getSystemDefaults();
+    const trialExpiresAt = new Date(Date.now() + defaults.defaultTrialDays * 24 * 60 * 60 * 1000);
+    const totalPayable = Math.max(0, defaults.defaultMonthlyFee * defaults.defaultSubscriptionMonths - defaults.defaultDiscountAmount);
+
     const user = await prisma.user.create({
       data: {
         name,
         email: email.trim().toLowerCase(),
         password: hashedPassword,
         role: userRole,
+        planName: defaults.defaultPlanName,
+        isTrial: true,
+        trialDays: defaults.defaultTrialDays,
+        trialExpiresAt: trialExpiresAt,
+        monthlyFee: defaults.defaultMonthlyFee,
+        subscriptionMonths: defaults.defaultSubscriptionMonths,
+        discountAmount: defaults.defaultDiscountAmount,
+        totalPayable: totalPayable,
+        isPaid: false,
       },
     });
 
@@ -292,13 +361,22 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully',
+      message: `Account created successfully with a ${defaults.defaultTrialDays}-day trial period!`,
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        planName: user.planName,
+        isTrial: user.isTrial,
+        trialDays: user.trialDays,
+        trialExpiresAt: user.trialExpiresAt,
+        isPaid: user.isPaid,
+        monthlyFee: user.monthlyFee,
+        subscriptionMonths: user.subscriptionMonths,
+        discountAmount: user.discountAmount,
+        totalPayable: user.totalPayable,
         hasAdminPassword: !!user.adminPassword,
       },
     });
@@ -619,6 +697,20 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
           provider: user.provider,
           avatar: user.avatar,
           isLocked: user.isLocked,
+          planName: user.planName,
+          isTrial: user.isTrial,
+          trialDays: user.trialDays,
+          trialExpiresAt: user.trialExpiresAt,
+          isPaid: user.isPaid,
+          monthlyFee: user.monthlyFee,
+          subscriptionMonths: user.subscriptionMonths,
+          discountAmount: user.discountAmount,
+          totalPayable: user.totalPayable,
+          subscriptionExpiresAt: user.subscriptionExpiresAt,
+          lastPaidAt: user.lastPaidAt,
+          hotelGst: user.hotelGst || '',
+          upiId: user.upiId || '',
+          upiName: user.upiName || '',
           hasAdminPassword: !!user.adminPassword,
         },
       });
@@ -626,6 +718,10 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
 
     // IF USER DOES NOT EXIST: Automatically create account with Google details and log in
     const finalName = providedName || name || cleanEmail.split('@')[0];
+
+    const defaults = await getSystemDefaults();
+    const trialExpiresAt = new Date(Date.now() + defaults.defaultTrialDays * 24 * 60 * 60 * 1000);
+    const totalPayable = Math.max(0, defaults.defaultMonthlyFee * defaults.defaultSubscriptionMonths - defaults.defaultDiscountAmount);
 
     user = await prisma.user.create({
       data: {
@@ -636,6 +732,15 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
         avatar: avatar || null,
         password: null,
         role: 'ADMIN',
+        planName: defaults.defaultPlanName,
+        isTrial: true,
+        trialDays: defaults.defaultTrialDays,
+        trialExpiresAt: trialExpiresAt,
+        monthlyFee: defaults.defaultMonthlyFee,
+        subscriptionMonths: defaults.defaultSubscriptionMonths,
+        discountAmount: defaults.defaultDiscountAmount,
+        totalPayable: totalPayable,
+        isPaid: false,
       },
     });
 
@@ -682,7 +787,7 @@ export const updateHotelSettings = async (req: Request, res: Response, next: Nex
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const { hotelName, hotelAddress, hotelPhone, hotelGst } = req.body;
+    const { hotelName, hotelAddress, hotelPhone, hotelGst, upiId, upiName } = req.body;
 
     if (!hotelName || !hotelName.trim()) {
       return res.status(400).json({ success: false, message: 'Hotel name is required' });
@@ -695,6 +800,8 @@ export const updateHotelSettings = async (req: Request, res: Response, next: Nex
         hotelAddress: hotelAddress ? hotelAddress.trim() : null,
         hotelPhone: hotelPhone ? hotelPhone.trim() : null,
         hotelGst: hotelGst ? hotelGst.trim() : null,
+        upiId: upiId ? upiId.trim() : null,
+        upiName: upiName ? upiName.trim() : null,
       },
       select: {
         id: true,
@@ -707,6 +814,8 @@ export const updateHotelSettings = async (req: Request, res: Response, next: Nex
         hotelAddress: true,
         hotelPhone: true,
         hotelGst: true,
+        upiId: true,
+        upiName: true,
         createdAt: true,
       },
     });
@@ -721,6 +830,72 @@ export const updateHotelSettings = async (req: Request, res: Response, next: Nex
         hotelAddress: updatedUser.hotelAddress || '',
         hotelPhone: updatedUser.hotelPhone || '',
         hotelGst: updatedUser.hotelGst || '',
+        upiId: updatedUser.upiId || '',
+        upiName: updatedUser.upiName || '',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const paySubscription = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    const months = user.subscriptionMonths || 1;
+    const now = new Date();
+    let newExpiry = new Date();
+    if (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > now) {
+      newExpiry = new Date(user.subscriptionExpiresAt);
+    }
+    newExpiry.setMonth(newExpiry.getMonth() + months);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isPaid: true,
+        isLocked: false,
+        lastPaidAt: now,
+        subscriptionExpiresAt: newExpiry,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isLocked: true,
+        isPaid: true,
+        monthlyFee: true,
+        subscriptionMonths: true,
+        discountAmount: true,
+        totalPayable: true,
+        subscriptionExpiresAt: true,
+        lastPaidAt: true,
+        adminPassword: true,
+        hotelName: true,
+        hotelAddress: true,
+        hotelPhone: true,
+        hotelGst: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Payment of ₹${updatedUser.totalPayable} received successfully! Subscription extended by ${months} month(s). All role dashboards unlocked.`,
+      user: {
+        ...updatedUser,
+        hasAdminPassword: !!updatedUser.adminPassword,
+        hotelName: updatedUser.hotelName || updatedUser.name || 'SmartResto',
       },
     });
   } catch (error) {

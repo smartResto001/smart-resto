@@ -17,6 +17,10 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  CreditCard,
+  Calendar,
+  DollarSign,
+  Tag,
 } from 'lucide-react';
 
 interface HotelAccount {
@@ -25,6 +29,17 @@ interface HotelAccount {
   email: string;
   role: string;
   isLocked: boolean;
+  planName?: string;
+  isTrial?: boolean;
+  trialDays?: number;
+  trialExpiresAt?: string | null;
+  isPaid?: boolean;
+  monthlyFee?: number;
+  subscriptionMonths?: number;
+  discountAmount?: number;
+  totalPayable?: number;
+  subscriptionExpiresAt?: string | null;
+  lastPaidAt?: string | null;
   createdAt: string;
   tableCount: number;
   orderCount: number;
@@ -38,6 +53,30 @@ export const ChiefAdminDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED'>('ALL');
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+
+  // System Global Settings State
+  const [sysPlanName, setSysPlanName] = useState('Basic Plan');
+  const [sysMonthlyFee, setSysMonthlyFee] = useState(1000);
+  const [sysMonths, setSysMonths] = useState(1);
+  const [sysDiscount, setSysDiscount] = useState(0);
+  const [sysTrialDays, setSysTrialDays] = useState(2);
+  const [isSavingSysSettings, setIsSavingSysSettings] = useState(false);
+  const [sysSettingsError, setSysSettingsError] = useState('');
+  const [sysSettingsSuccess, setSysSettingsSuccess] = useState('');
+  const [showSysSettingsCard, setShowSysSettingsCard] = useState(true);
+
+  // Subscription Control Modal State
+  const [subAccountToEdit, setSubAccountToEdit] = useState<HotelAccount | null>(null);
+  const [editPlanName, setEditPlanName] = useState<string>('Basic Plan');
+  const [editIsTrial, setEditIsTrial] = useState<boolean>(true);
+  const [editTrialDays, setEditTrialDays] = useState<number>(2);
+  const [editMonths, setEditMonths] = useState<number>(1);
+  const [editMonthlyFee, setEditMonthlyFee] = useState<number>(1000);
+  const [editDiscountAmount, setEditDiscountAmount] = useState<number>(0);
+  const [editIsPaid, setEditIsPaid] = useState<boolean>(false);
+  const [editIsLocked, setEditIsLocked] = useState<boolean>(false);
+  const [isSavingSub, setIsSavingSub] = useState<boolean>(false);
+  const [subModalError, setSubModalError] = useState<string>('');
 
   // Create Account Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -65,8 +104,88 @@ export const ChiefAdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchSystemSettings = async () => {
+    try {
+      const res = await API.get('/chief-admin/subscription-settings');
+      if (res.data.success && res.data.data) {
+        const d = res.data.data;
+        setSysPlanName(d.defaultPlanName || 'Basic Plan');
+        setSysMonthlyFee(d.defaultMonthlyFee ?? 1000);
+        setSysMonths(d.defaultSubscriptionMonths ?? 1);
+        setSysDiscount(d.defaultDiscountAmount ?? 0);
+        setSysTrialDays(d.defaultTrialDays ?? 2);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch global subscription settings', err);
+    }
+  };
+
+  const handleSaveSystemSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSysSettings(true);
+    setSysSettingsError('');
+    setSysSettingsSuccess('');
+    try {
+      const res = await API.put('/chief-admin/subscription-settings', {
+        defaultPlanName: sysPlanName,
+        defaultMonthlyFee: Number(sysMonthlyFee),
+        defaultSubscriptionMonths: Number(sysMonths),
+        defaultDiscountAmount: Number(sysDiscount),
+        defaultTrialDays: Number(sysTrialDays),
+      });
+      setSysSettingsSuccess(res.data.message);
+      fetchSystemSettings();
+    } catch (err: any) {
+      setSysSettingsError(err.response?.data?.message || 'Failed to update global default settings');
+    } finally {
+      setIsSavingSysSettings(false);
+    }
+  };
+
+  const handleOpenSubModal = (acc: HotelAccount) => {
+    setSubAccountToEdit(acc);
+    setEditPlanName(acc.planName || 'Basic Plan');
+    setEditIsTrial(acc.isTrial ?? true);
+    setEditTrialDays(acc.trialDays ?? 2);
+    setEditMonths(acc.subscriptionMonths || 1);
+    setEditMonthlyFee(acc.monthlyFee ?? 1000);
+    setEditDiscountAmount(acc.discountAmount ?? 0);
+    setEditIsPaid(acc.isPaid ?? false);
+    setEditIsLocked(acc.isLocked ?? false);
+    setSubModalError('');
+  };
+
+  const handleSaveSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subAccountToEdit) return;
+    setIsSavingSub(true);
+    setSubModalError('');
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await API.put(`/chief-admin/users/${subAccountToEdit.id}/subscription`, {
+        planName: editPlanName,
+        isTrial: editIsTrial,
+        trialDays: Number(editTrialDays),
+        monthlyFee: Number(editMonthlyFee),
+        subscriptionMonths: Number(editMonths),
+        discountAmount: Number(editDiscountAmount),
+        isPaid: editIsPaid,
+        isLocked: editIsLocked,
+      });
+      setActionSuccess(res.data.message);
+      setSubAccountToEdit(null);
+      fetchAccounts();
+    } catch (err: any) {
+      setSubModalError(err.response?.data?.message || 'Failed to update subscription settings');
+    } finally {
+      setIsSavingSub(false);
+    }
+  };
+
   useEffect(() => {
     fetchAccounts();
+    fetchSystemSettings();
   }, []);
 
   const handleToggleLock = async (account: HotelAccount) => {
@@ -240,6 +359,104 @@ export const ChiefAdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Global Subscription Plan & Default Trial Settings Card */}
+      <div className="bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/40 p-5 rounded-3xl border border-purple-800/40 backdrop-blur-xl shadow-xl space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-500/30">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-100 text-sm flex items-center space-x-2">
+                <span>Global Subscription Plan & Default Trial Settings</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                  Default Sign-up Policy
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                New user registrants will automatically receive these plan parameters and trial period (Default: 2-Day Trial).
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSysSettingsCard(!showSysSettingsCard)}
+            className="text-xs text-purple-400 hover:text-purple-300 font-bold px-3 py-1 bg-purple-500/10 rounded-lg border border-purple-500/20"
+          >
+            {showSysSettingsCard ? 'Minimize Settings' : 'Expand Settings'}
+          </button>
+        </div>
+
+        {sysSettingsSuccess && (
+          <div className="p-3 bg-emerald-950/80 border border-emerald-700/60 rounded-xl text-emerald-300 text-xs font-semibold">
+            {sysSettingsSuccess}
+          </div>
+        )}
+        {sysSettingsError && (
+          <div className="p-3 bg-rose-950/80 border border-rose-700/60 rounded-xl text-rose-300 text-xs font-semibold">
+            {sysSettingsError}
+          </div>
+        )}
+
+        {showSysSettingsCard && (
+          <form onSubmit={handleSaveSystemSettings} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Default Plan Name</label>
+              <input
+                type="text"
+                required
+                value={sysPlanName}
+                onChange={(e) => setSysPlanName(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-emerald-400 mb-1">Default Trial (Days)</label>
+              <input
+                type="number"
+                min="0"
+                max="365"
+                required
+                value={sysTrialDays}
+                onChange={(e) => setSysTrialDays(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-full px-3 py-2 bg-slate-950 border border-emerald-800/60 rounded-xl text-xs text-emerald-300 font-bold focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Monthly Rate (₹)</label>
+              <input
+                type="number"
+                min="0"
+                required
+                value={sysMonthlyFee}
+                onChange={(e) => setSysMonthlyFee(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Default Discount (₹)</label>
+              <input
+                type="number"
+                min="0"
+                value={sysDiscount}
+                onChange={(e) => setSysDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={isSavingSysSettings}
+                className="w-full py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center space-x-1.5"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>{isSavingSysSettings ? 'Saving Defaults...' : 'Save Default Policy'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row gap-3 justify-between items-center">
         <div className="relative w-full md:w-80">
@@ -295,6 +512,7 @@ export const ChiefAdminDashboard: React.FC = () => {
                   <th className="px-6 py-4">Account / Hotel</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Subscription & Pricing</th>
                   <th className="px-6 py-4">Platform Stats</th>
                   <th className="px-6 py-4">Joined Date</th>
                   <th className="px-6 py-4 text-right">Chief Controls</th>
@@ -352,6 +570,43 @@ export const ChiefAdminDashboard: React.FC = () => {
                       )}
                     </td>
 
+                    {/* Subscription & Pricing */}
+                    <td className="px-6 py-4">
+                      {acc.role === 'CHIEF_ADMIN' ? (
+                        <span className="text-slate-500 text-[11px]">N/A (Chief Admin)</span>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-1.5 text-xs font-extrabold text-amber-400">
+                            <span>Plan: {acc.planName || 'Basic'}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              (₹{acc.totalPayable ?? 1000}/mo)
+                            </span>
+                          </div>
+                          <div>
+                            {acc.isTrial && acc.trialExpiresAt && new Date(acc.trialExpiresAt) > new Date() ? (
+                              <span className="inline-flex items-center space-x-1 text-emerald-400 text-[10px] font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                                <span>🎁 Active {acc.trialDays ?? 2}-Day Trial</span>
+                                <span className="text-[9px] text-slate-400 font-normal">
+                                  (Exp: {new Date(acc.trialExpiresAt).toLocaleDateString()})
+                                </span>
+                              </span>
+                            ) : acc.isPaid && (!acc.subscriptionExpiresAt || new Date(acc.subscriptionExpiresAt) >= new Date()) ? (
+                              <span className="inline-flex items-center space-x-1 text-amber-400 text-[10px] font-bold bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-800/60">
+                                <span>⭐ Paid Subscription</span>
+                                <span className="text-[9px] text-slate-400 font-normal">
+                                  {acc.subscriptionExpiresAt ? `(Exp: ${new Date(acc.subscriptionExpiresAt).toLocaleDateString()})` : ''}
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 text-rose-400 text-[10px] font-bold bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-800/60">
+                                <span>⚠️ Trial / Sub Expired</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+
                     {/* Platform Stats */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3 text-slate-300 text-[11px]">
@@ -378,6 +633,15 @@ export const ChiefAdminDashboard: React.FC = () => {
                         <span className="text-[10px] text-purple-400 font-bold italic">Master Account</span>
                       ) : (
                         <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleOpenSubModal(acc)}
+                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-purple-950/50 hover:bg-purple-900/60 text-purple-300 border border-purple-800/60 transition-all flex items-center space-x-1.5"
+                            title="Configure Subscription, Months & Discount"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Plan & Pricing</span>
+                          </button>
+
                           <button
                             onClick={() => handleToggleLock(acc)}
                             className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition-all border ${acc.isLocked
@@ -572,6 +836,205 @@ export const ChiefAdminDashboard: React.FC = () => {
                 {isDeleting ? 'Deleting...' : 'Delete Permanently'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBSCRIPTION & PRICING CONTROL MODAL */}
+      {subAccountToEdit && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto touch-scroll">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-100 text-base">Subscription & Pricing Control</h3>
+                  <p className="text-[11px] text-slate-400">{subAccountToEdit.name} ({subAccountToEdit.email})</p>
+                </div>
+              </div>
+              <button onClick={() => setSubAccountToEdit(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {subModalError && (
+              <div className="p-3 bg-rose-950/50 border border-rose-800/60 rounded-xl text-rose-300 text-xs">
+                {subModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSubscription} className="space-y-4">
+              {/* Plan Name & Trial Settings */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Subscription Plan Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editPlanName}
+                    onChange={(e) => setEditPlanName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Trial Period Mode</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsTrial(!editIsTrial)}
+                    className={`w-full py-2 rounded-xl text-xs font-bold border transition-all ${editIsTrial ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                  >
+                    {editIsTrial ? '🎁 Active Trial Mode' : '⭐ Standard Paid Mode'}
+                  </button>
+                </div>
+              </div>
+
+              {editIsTrial && (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-800/50 rounded-2xl space-y-2">
+                  <label className="block text-xs font-semibold text-emerald-300 flex justify-between">
+                    <span>Trial Duration (Days)</span>
+                    <span className="font-bold">{editTrialDays} Days</span>
+                  </label>
+                  <div className="flex space-x-2">
+                    {[2, 3, 7, 14, 30].map((d) => (
+                      <button
+                        type="button"
+                        key={d}
+                        onClick={() => setEditTrialDays(d)}
+                        className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all border ${editTrialDays === d ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                      >
+                        {d}d
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max="365"
+                    value={editTrialDays}
+                    onChange={(e) => setEditTrialDays(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <p className="text-[10px] text-emerald-400">
+                    Modifying trial days updates trial expiry to {editTrialDays} days from now.
+                  </p>
+                </div>
+              )}
+
+              {/* Subscription Duration (Months) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex justify-between">
+                  <span>Subscription Duration (Months) *</span>
+                  <span className="text-purple-400 font-bold">{editMonths} Month(s)</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[1, 3, 6, 12].map((m) => (
+                    <button
+                      type="button"
+                      key={m}
+                      onClick={() => setEditMonths(m)}
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all border ${editMonths === m ? 'bg-purple-600 text-white border-purple-500' : 'bg-slate-950 text-slate-400 border-slate-800'}`}
+                    >
+                      {m} {m === 1 ? 'Mo' : 'Mos'}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  required
+                  value={editMonths}
+                  onChange={(e) => setEditMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Monthly Rate & Discount */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Monthly Rate (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editMonthlyFee}
+                    onChange={(e) => setEditMonthlyFee(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Discount Amount (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editDiscountAmount}
+                    onChange={(e) => setEditDiscountAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Live Payable Calculation Summary */}
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1.5">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Base ({editMonths} mo x ₹{editMonthlyFee})</span>
+                  <span>₹{editMonthlyFee * editMonths}</span>
+                </div>
+                {editDiscountAmount > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-400">
+                    <span>Chief Discount</span>
+                    <span>- ₹{editDiscountAmount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-extrabold text-amber-400 border-t border-slate-800 pt-1.5">
+                  <span>Net Payable Amount</span>
+                  <span>₹{Math.max(0, editMonthlyFee * editMonths - editDiscountAmount)}</span>
+                </div>
+              </div>
+
+              {/* Status Toggles */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Payment Status</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsPaid(!editIsPaid)}
+                    className={`w-full py-2 rounded-xl text-xs font-bold border transition-all ${editIsPaid ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700' : 'bg-rose-950/80 text-rose-300 border-rose-700'}`}
+                  >
+                    {editIsPaid ? 'Paid & Active' : 'Unpaid / Pending'}
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Account Access</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsLocked(!editIsLocked)}
+                    className={`w-full py-2 rounded-xl text-xs font-bold border transition-all ${editIsLocked ? 'bg-rose-950/80 text-rose-300 border-rose-700' : 'bg-emerald-950/80 text-emerald-300 border-emerald-700'}`}
+                  >
+                    {editIsLocked ? 'Access Locked' : 'Access Unlocked'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSubAccountToEdit(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSub}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30"
+                >
+                  {isSavingSub ? 'Saving...' : 'Save & Update Plan'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

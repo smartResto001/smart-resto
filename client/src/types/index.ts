@@ -20,6 +20,9 @@ export type PaymentMethod =
   | 'WALLET'
   | 'SPLIT';
 
+export type OrderSource = 'WAITER' | 'QR';
+export type CustomerType = 'REGULAR' | 'WAITER_CUSTOMER' | 'QR_CUSTOMER';
+
 export interface User {
   id: string;
   name: string;
@@ -29,12 +32,35 @@ export interface User {
   hotelAddress?: string | null;
   hotelPhone?: string | null;
   hotelGst?: string | null;
+  upiId?: string | null;
+  upiName?: string | null;
   googleId?: string | null;
   provider?: string;
   avatar?: string | null;
   hasAdminPassword?: boolean;
   isLocked?: boolean;
+  planName?: string;
+  isTrial?: boolean;
+  trialDays?: number;
+  trialExpiresAt?: string | null;
+  monthlyFee?: number;
+  subscriptionMonths?: number;
+  discountAmount?: number;
+  totalPayable?: number;
+  isPaid?: boolean;
+  subscriptionExpiresAt?: string | null;
+  lastPaidAt?: string | null;
   createdAt?: string;
+}
+
+export interface SystemSettings {
+  id: string;
+  defaultPlanName: string;
+  defaultMonthlyFee: number;
+  defaultSubscriptionMonths: number;
+  defaultDiscountAmount: number;
+  defaultTrialDays: number;
+  updatedAt?: string;
 }
 
 export interface Table {
@@ -42,6 +68,7 @@ export interface Table {
   tableNumber: number;
   capacity: number;
   status: TableStatus;
+  qrToken?: string | null;
   orders?: Order[];
   createdAt?: string;
   updatedAt?: string;
@@ -63,6 +90,9 @@ export interface FoodItem {
   availability: boolean;
   isVeg: boolean;
   image?: string;
+  ingredients?: string | null;
+  isPopular?: boolean;
+  spicyLevel?: number; // 0: None, 1: Mild, 2: Medium, 3: Spicy
   categoryId: string;
   category?: Category;
 }
@@ -87,6 +117,10 @@ export interface Order {
   waiterId?: string;
   waiter?: { name: string; email?: string };
   status: OrderStatus;
+  orderSource?: OrderSource;
+  customerType?: CustomerType;
+  numberOfPersons?: number | null;
+  sessionId?: string | null;
   totalAmount: number;
   taxAmount: number;
   discountAmount?: number;
@@ -127,6 +161,17 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface Feedback {
+  id: string;
+  tableId: string;
+  orderId?: string | null;
+  ratingFood: number;
+  ratingService: number;
+  comments?: string | null;
+  customerName?: string | null;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   totalOrders: number;
   totalCompletedOrders: number;
@@ -134,6 +179,10 @@ export interface DashboardStats {
   activeOrdersCount: number;
   totalRevenue: number;
   avgOrderValue: number;
+  totalQrOrders?: number;
+  totalWaiterOrders?: number;
+  mostOrderedTable?: number | string | null;
+  mostOrderedFood?: string | null;
   topFoods: {
     id?: string;
     name: string;

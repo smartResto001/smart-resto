@@ -11,6 +11,7 @@ import { BillingDashboard } from './pages/BillingDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ChiefAdminDashboard } from './pages/ChiefAdminDashboard';
 import { ChiefAdminLogin } from './pages/ChiefAdminLogin';
+import { CustomerQrOrder } from './pages/CustomerQrOrder';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { PWAInstallPrompt } from './components/layout/PWAInstallPrompt';
 
@@ -42,6 +43,7 @@ export const App: React.FC = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/chief-admin/login" element={<ChiefAdminLogin />} />
               <Route path="/chief-admin-login" element={<ChiefAdminLogin />} />
+              <Route path="/table/:tableNumber/:qrToken" element={<CustomerQrOrder />} />
 
               {/* Protected Workstation Routes for Logged In Accounts */}
               <Route element={<ProtectedRoute />}>

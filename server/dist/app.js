@@ -15,6 +15,7 @@ const billingRoutes_1 = __importDefault(require("./routes/billingRoutes"));
 const reportRoutes_1 = __importDefault(require("./routes/reportRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const chiefAdminRoutes_1 = __importDefault(require("./routes/chiefAdminRoutes"));
+const publicQrRoutes_1 = __importDefault(require("./routes/publicQrRoutes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const corsUtils_1 = require("./utils/corsUtils");
 const app = (0, express_1.default)();
@@ -45,6 +46,7 @@ app.use('/api/billing', billingRoutes_1.default);
 app.use('/api/reports', reportRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
 app.use('/api/chief-admin', chiefAdminRoutes_1.default);
+app.use('/api/public/qr', publicQrRoutes_1.default);
 // Global Error Handler
 app.use(errorHandler_1.errorHandler);
 exports.default = app;

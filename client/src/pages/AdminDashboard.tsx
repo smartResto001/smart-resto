@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Category, FoodItem, Table, DashboardStats } from '../types';
-import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon, Eye, EyeOff, Building2 } from 'lucide-react';
+import { LayoutDashboard, Utensils, Grid, Plus, Trash2, Edit, DollarSign, TrendingUp, ShoppingBag, ShieldCheck, Check, X, AlertTriangle, Lock, KeyRound, Upload, Image as ImageIcon, Eye, EyeOff, Building2, QrCode, Smartphone } from 'lucide-react';
+import { QrManagementModal } from '../components/admin/QrManagementModal';
 
 export const AdminDashboard: React.FC = () => {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'analytics' | 'menu' | 'tables'>('analytics');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   // Stats State
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -55,6 +57,8 @@ export const AdminDashboard: React.FC = () => {
   const [hotelAddressInput, setHotelAddressInput] = useState(user?.hotelAddress || '');
   const [hotelPhoneInput, setHotelPhoneInput] = useState(user?.hotelPhone || '');
   const [hotelGstInput, setHotelGstInput] = useState(user?.hotelGst || '');
+  const [upiIdInput, setUpiIdInput] = useState(user?.upiId || '');
+  const [upiNameInput, setUpiNameInput] = useState(user?.upiName || user?.hotelName || user?.name || '');
   const [hotelSettingsError, setHotelSettingsError] = useState('');
   const [hotelSettingsSuccess, setHotelSettingsSuccess] = useState('');
   const [isSavingHotelSettings, setIsSavingHotelSettings] = useState(false);
@@ -65,6 +69,8 @@ export const AdminDashboard: React.FC = () => {
       setHotelAddressInput(user.hotelAddress || '');
       setHotelPhoneInput(user.hotelPhone || '');
       setHotelGstInput(user.hotelGst || '');
+      setUpiIdInput(user.upiId || '');
+      setUpiNameInput(user.upiName || user.hotelName || user.name || '');
     }
   }, [user]);
 
@@ -85,9 +91,11 @@ export const AdminDashboard: React.FC = () => {
         hotelAddress: hotelAddressInput,
         hotelPhone: hotelPhoneInput,
         hotelGst: hotelGstInput,
+        upiId: upiIdInput,
+        upiName: upiNameInput,
       });
       updateUser(res.data.user);
-      setHotelSettingsSuccess(res.data.message || 'Hotel details & bill header updated!');
+      setHotelSettingsSuccess(res.data.message || 'Hotel details & payment header updated!');
       setTimeout(() => {
         setIsHotelSettingsModalOpen(false);
       }, 1200);
@@ -394,6 +402,14 @@ export const AdminDashboard: React.FC = () => {
           >
             <Building2 className="w-3.5 h-3.5 text-amber-400" />
             <span>Hotel Info & Bill Header</span>
+          </button>
+          <button
+            onClick={() => setIsQrModalOpen(true)}
+            className="px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all shadow-inner"
+            title="Generate & Manage Table QR Codes"
+          >
+            <QrCode className="w-3.5 h-3.5 text-sky-400" />
+            <span>Manage Table QR Codes</span>
           </button>
         </div>
 
@@ -1066,6 +1082,42 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Direct Bank Payment (UPI QR) Configuration */}
+              <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                    💳 Bank Account UPI QR Receiving Setup
+                  </span>
+                  <span className="text-[10px] text-emerald-300/70 bg-emerald-900/50 px-2 py-0.5 rounded-full">0% Gateway Fee</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Enter your Bank UPI VPA ID (e.g. Google Pay, PhonePe, Paytm, BHIM) so customers scan QR codes and send payments directly into your bank account.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">Bank UPI VPA ID</label>
+                    <input
+                      type="text"
+                      value={upiIdInput}
+                      onChange={(e) => setUpiIdInput(e.target.value)}
+                      placeholder="e.g. 9876543210@paytm, merchant@okaxis"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">Payee / Account Holder Name</label>
+                    <input
+                      type="text"
+                      value={upiNameInput}
+                      onChange={(e) => setUpiNameInput(e.target.value)}
+                      placeholder="e.g. Smart Resto, John Doe"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Preview of Header */}
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-center text-xs space-y-1">
                 <p className="text-[10px] text-amber-400 uppercase font-sans font-bold">Print Header Live Preview</p>
@@ -1073,6 +1125,7 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-slate-400 text-[10px]">{hotelAddressInput || 'Hotel Address'}</p>
                 {hotelPhoneInput && <p className="text-slate-400 text-[10px]">Ph: {hotelPhoneInput}</p>}
                 <p className="text-slate-400 text-[10px]">GSTIN: {hotelGstInput || '27AAAAA0000A1Z5'}</p>
+                {upiIdInput && <p className="text-emerald-400 text-[10px] pt-1 border-t border-slate-800">UPI ID for Payment: {upiIdInput}</p>}
               </div>
 
               <div className="flex gap-3 pt-2">
@@ -1096,6 +1149,15 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QR Code Generator & Management Modal */}
+      <QrManagementModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        tables={tables}
+        hotelName={user?.hotelName || user?.name || 'SmartResto'}
+        onRefreshTables={fetchTables}
+      />
 
     </div>
   );

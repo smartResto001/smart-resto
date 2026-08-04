@@ -9,5 +9,6 @@ router.use(authMiddleware_1.authenticateJWT);
 router.get('/', tableController_1.getAllTables);
 router.put('/:id/status', tableController_1.updateTableStatus);
 router.post('/', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), tableController_1.createTable);
+router.post('/:id/regenerate-qr', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), tableController_1.regenerateTableQrToken);
 router.delete('/:id', (0, authMiddleware_1.authorizeRoles)(types_1.Role.ADMIN), tableController_1.deleteTable);
 exports.default = router;

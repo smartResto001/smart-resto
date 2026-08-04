@@ -216,6 +216,8 @@ export const updateOrderStatus = async (req: Request, res: Response, next: NextF
       const emitTo = targetRoom ? io.to(targetRoom) : io;
 
       emitTo.emit('order:status_changed', order);
+      io.to(`table:${order.tableId}`).emit('order:status_changed', order);
+      io.to(`table:${order.tableId}`).emit('customer:order_updated', order);
 
       // Targeted alerts
       if (status === OrderStatus.READY) {

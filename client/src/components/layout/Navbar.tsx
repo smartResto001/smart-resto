@@ -26,6 +26,45 @@ export const Navbar: React.FC = () => {
 
   const isRoleSelectionPage = location.pathname === '/role-selection';
 
+  const renderSubscriptionBadge = () => {
+    if (!user || user.role === 'CHIEF_ADMIN') return null;
+
+    const isTrialActive = user.isTrial === true && !!user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date();
+    const isPaidActive = user.isPaid === true && (!user.subscriptionExpiresAt || new Date(user.subscriptionExpiresAt) > new Date());
+
+    if (isTrialActive && user.trialExpiresAt) {
+      const msLeft = new Date(user.trialExpiresAt).getTime() - Date.now();
+      const hoursLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60)));
+      const daysLeft = Math.floor(hoursLeft / 24);
+      const remainingHours = hoursLeft % 24;
+
+      const timeText = daysLeft > 0 ? `${daysLeft}d ${remainingHours}h left` : `${hoursLeft}h left`;
+
+      return (
+        <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-sm">
+          <span className="animate-pulse">🎁</span>
+          <span>{user.planName || 'Basic'} Trial ({timeText})</span>
+        </div>
+      );
+    }
+
+    if (isPaidActive) {
+      return (
+        <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-sm">
+          <span>⭐</span>
+          <span>{user.planName || 'Pro'} Active</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold shadow-sm animate-pulse">
+        <span>⚠️</span>
+        <span>Trial Expired</span>
+      </div>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -46,8 +85,10 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Status & Clock */}
-        <div className="hidden md:flex items-center space-x-6">
+        {/* Live Status, Subscription & Clock */}
+        <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+          {renderSubscriptionBadge()}
+
           <div className="flex items-center space-x-2 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
             <span className="relative flex h-2.5 w-2.5">
               {isConnected ? (

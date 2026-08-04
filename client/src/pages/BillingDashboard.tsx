@@ -178,7 +178,14 @@ export const BillingDashboard: React.FC = () => {
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <span className="text-xs font-mono text-amber-400 font-bold">#{order.orderNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono text-amber-400 font-bold">#{order.orderNumber}</span>
+                          {order.orderSource === 'QR' && (
+                            <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[10px] font-extrabold">
+                              📱 QR
+                            </span>
+                          )}
+                        </div>
                         <h4 className="font-bold text-slate-100 text-sm">{order.customerName}</h4>
                       </div>
                       <span
@@ -210,8 +217,13 @@ export const BillingDashboard: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                   <div>
-                    <h3 className="font-bold text-slate-100 text-base">
+                    <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
                       Bill Checkout - Table {selectedOrder.table?.tableNumber}
+                      {selectedOrder.orderSource === 'QR' && (
+                        <span className="px-2 py-0.5 bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-md text-xs font-bold">
+                          📱 Customer QR Order
+                        </span>
+                      )}
                     </h3>
                     <p className="text-xs text-slate-400">Order #{selectedOrder.orderNumber} • {selectedOrder.customerName}</p>
                   </div>
@@ -343,6 +355,45 @@ export const BillingDashboard: React.FC = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Live UPI Payment QR Display */}
+                {paymentMethod === 'UPI' && (
+                  <div className="p-3.5 bg-slate-950/90 border border-emerald-500/40 rounded-2xl space-y-2.5 text-center shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <QrCode className="w-4 h-4 text-emerald-400" /> Live UPI Payment QR
+                      </span>
+                      <span className="text-[10px] text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold">0% Gateway Fee</span>
+                    </div>
+
+                    <div className="p-3 bg-white rounded-xl inline-block shadow-xl mx-auto border-4 border-slate-900">
+                      <QRCodeSVG
+                        value={`upi://pay?pa=${encodeURIComponent(user?.upiId || 'smartresto@upi')}&pn=${encodeURIComponent(user?.upiName || user?.hotelName || 'Smart Resto')}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Order ' + (selectedOrder?.orderNumber || ''))}`}
+                        size={155}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-200">
+                        Scan & Pay <span className="text-amber-400 font-extrabold text-sm">₹{grandTotal.toFixed(2)}</span>
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        UPI VPA: <span className="text-emerald-300 font-bold">{user?.upiId || 'smartresto@upi'}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        GPay • PhonePe • Paytm • BHIM • Cred
+                      </p>
+                    </div>
+
+                    {!user?.upiId && (
+                      <div className="p-2 bg-amber-950/40 border border-amber-500/40 rounded-xl text-[10px] text-amber-300 text-left leading-tight">
+                        💡 <strong>Setup Tip:</strong> Go to <strong>Admin Dashboard → Settings</strong> to configure your own Bank UPI ID so payments enter your bank account directly.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Extra inputs for UPI/Card transaction ID or Cash Paid */}
                 <div className="grid grid-cols-2 gap-3">

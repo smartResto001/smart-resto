@@ -2,12 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/prisma';
 import { TableStatus } from '../types';
 import { getSocketIO } from '../socket/socketHandler';
+import { randomUUID } from 'crypto';
 
 export const getAllTables = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
 
-    const tables = await prisma.table.findMany({
+    let tables = await prisma.table.findMany({
       where: userId ? { userId } : {},
       orderBy: { tableNumber: 'asc' },
       include: {
@@ -28,6 +29,41 @@ export const getAllTables = async (req: Request, res: Response, next: NextFuncti
         },
       },
     });
+
+    // Ensure all tables have a qrToken generated
+    const tablesWithoutToken = tables.filter((t) => !t.qrToken);
+    if (tablesWithoutToken.length > 0) {
+      await Promise.all(
+        tablesWithoutToken.map((t) =>
+          prisma.table.update({
+            where: { id: t.id },
+            data: { qrToken: randomUUID() },
+          })
+        )
+      );
+      // Re-fetch with fresh tokens
+      tables = await prisma.table.findMany({
+        where: userId ? { userId } : {},
+        orderBy: { tableNumber: 'asc' },
+        include: {
+          orders: {
+            where: {
+              status: {
+                notIn: ['COMPLETED', 'PAID', 'CANCELLED'],
+              },
+            },
+            select: {
+              id: true,
+              orderNumber: true,
+              customerName: true,
+              status: true,
+              totalAmount: true,
+              orderTime: true,
+            },
+          },
+        },
+      });
+    }
 
     return res.status(200).json({ success: true, data: tables });
   } catch (error) {
@@ -100,6 +136,7 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
         tableNumber: Number(tableNumber),
         capacity: Number(capacity) || 4,
         status: TableStatus.AVAILABLE,
+        qrToken: randomUUID(),
         userId,
       },
     });
@@ -110,6 +147,41 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
     }
 
     return res.status(201).json({ success: true, data: table });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const regenerateTableQrToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const existingTable = await prisma.table.findUnique({ where: { id } });
+    if (!existingTable) {
+      return res.status(404).json({ success: false, message: 'Table not found' });
+    }
+
+    if (existingTable.userId && userId && existingTable.userId !== userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const newQrToken = randomUUID();
+    const table = await prisma.table.update({
+      where: { id },
+      data: { qrToken: newQrToken },
+    });
+
+    const io = getSocketIO();
+    if (io && userId) {
+      io.to(`account:${userId}`).emit('table:updated', table);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `QR code token successfully regenerated for Table ${table.tableNumber}`,
+      data: table,
+    });
   } catch (error) {
     next(error);
   }

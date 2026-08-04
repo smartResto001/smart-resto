@@ -173,13 +173,18 @@ export const KitchenDashboard: React.FC = () => {
                 {/* Card Top Banner */}
                 <div className={`p-4 border-b flex justify-between items-center ${getCardHeaderColor(order.status)}`}>
                   <div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                       <span className="text-base font-black tracking-wide font-mono">
                         #{order.orderNumber}
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-slate-950/60 text-xs font-bold">
                         Token #{order.tokenNumber}
                       </span>
+                      {order.orderSource === 'QR' && (
+                        <span className="px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[11px] font-extrabold flex items-center gap-1">
+                          📱 QR ORDER
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs font-bold text-slate-100 mt-1">
                       Table {order.table?.tableNumber} • {order.customerName}

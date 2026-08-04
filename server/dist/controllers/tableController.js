@@ -1,13 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteTable = exports.createTable = exports.updateTableStatus = exports.getAllTables = void 0;
+exports.deleteTable = exports.regenerateTableQrToken = exports.createTable = exports.updateTableStatus = exports.getAllTables = void 0;
 const prisma_1 = require("../config/prisma");
 const types_1 = require("../types");
 const socketHandler_1 = require("../socket/socketHandler");
+const crypto_1 = require("crypto");
 const getAllTables = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        const tables = await prisma_1.prisma.table.findMany({
+        let tables = await prisma_1.prisma.table.findMany({
             where: userId ? { userId } : {},
             orderBy: { tableNumber: 'asc' },
             include: {
@@ -28,6 +29,36 @@ const getAllTables = async (req, res, next) => {
                 },
             },
         });
+        // Ensure all tables have a qrToken generated
+        const tablesWithoutToken = tables.filter((t) => !t.qrToken);
+        if (tablesWithoutToken.length > 0) {
+            await Promise.all(tablesWithoutToken.map((t) => prisma_1.prisma.table.update({
+                where: { id: t.id },
+                data: { qrToken: (0, crypto_1.randomUUID)() },
+            })));
+            // Re-fetch with fresh tokens
+            tables = await prisma_1.prisma.table.findMany({
+                where: userId ? { userId } : {},
+                orderBy: { tableNumber: 'asc' },
+                include: {
+                    orders: {
+                        where: {
+                            status: {
+                                notIn: ['COMPLETED', 'PAID', 'CANCELLED'],
+                            },
+                        },
+                        select: {
+                            id: true,
+                            orderNumber: true,
+                            customerName: true,
+                            status: true,
+                            totalAmount: true,
+                            orderTime: true,
+                        },
+                    },
+                },
+            });
+        }
         return res.status(200).json({ success: true, data: tables });
     }
     catch (error) {
@@ -93,6 +124,7 @@ const createTable = async (req, res, next) => {
                 tableNumber: Number(tableNumber),
                 capacity: Number(capacity) || 4,
                 status: types_1.TableStatus.AVAILABLE,
+                qrToken: (0, crypto_1.randomUUID)(),
                 userId,
             },
         });
@@ -107,6 +139,37 @@ const createTable = async (req, res, next) => {
     }
 };
 exports.createTable = createTable;
+const regenerateTableQrToken = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.id;
+        const existingTable = await prisma_1.prisma.table.findUnique({ where: { id } });
+        if (!existingTable) {
+            return res.status(404).json({ success: false, message: 'Table not found' });
+        }
+        if (existingTable.userId && userId && existingTable.userId !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        const newQrToken = (0, crypto_1.randomUUID)();
+        const table = await prisma_1.prisma.table.update({
+            where: { id },
+            data: { qrToken: newQrToken },
+        });
+        const io = (0, socketHandler_1.getSocketIO)();
+        if (io && userId) {
+            io.to(`account:${userId}`).emit('table:updated', table);
+        }
+        return res.status(200).json({
+            success: true,
+            message: `QR code token successfully regenerated for Table ${table.tableNumber}`,
+            data: table,
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.regenerateTableQrToken = regenerateTableQrToken;
 const deleteTable = async (req, res, next) => {
     try {
         const { id } = req.params;
